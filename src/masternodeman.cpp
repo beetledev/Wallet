@@ -198,6 +198,27 @@ CMasternodeMan::CMasternodeMan()
     nDsqCount = 0;
 }
 
+CValidationState CMasternodeMan::GetInputCheckingTx(const CTxIn& vin, CMutableTransaction& tx)
+{
+    CValidationState state;
+    CAmount          deposit;
+
+    if(!CMasternode::IsDepositCoins(vin, deposit)) {
+        state.Invalid(false, 0, "MN input checking tx: invalid vin amount");
+        return state;
+    }
+
+    CMutableTransaction chk_tx;
+
+    chk_tx.vin.push_back(vin);
+//    chk_tx.vout.push_back(CTxOut(9999.99 * COIN, obfuScationPool.collateralPubKey));
+    chk_tx.vout.push_back(CTxOut(deposit - 0.01 * COIN, obfuScationPool.collateralPubKey));
+
+    tx = chk_tx;
+
+    return state;
+}
+
 bool CMasternodeMan::Add(CMasternode& mn)
 {
     LOCK(cs);
@@ -348,17 +369,36 @@ void CMasternodeMan::Clear()
     nDsqCount = 0;
 }
 
-int CMasternodeMan::stable_size ()
+int CMasternodeMan::size(unsigned mnlevel)
+{
+    auto check_level = mnlevel != CMasternode::LevelValue::UNSPECIFIED;
+
+    return std::count_if(vMasternodes.begin(), vMasternodes.end(), [=](CMasternode& mn){
+
+        if(check_level && mnlevel != mn.Level())
+            return false;
+
+        return true;
+    });
+}
+
+int CMasternodeMan::stable_size(unsigned mnlevel)
 {
     int nStable_size = 0;
     int nMinProtocol = ActiveProtocol();
     int64_t nMasternode_Min_Age = MN_WINNER_MINIMUM_AGE;
     int64_t nMasternode_Age = 0;
 
+    auto check_level = mnlevel != CMasternode::LevelValue::UNSPECIFIED;
+
     BOOST_FOREACH (CMasternode& mn, vMasternodes) {
         if (mn.protocolVersion < nMinProtocol) {
             continue; // Skip obsolete versions
         }
+
+        if(check_level && mnlevel != mn.Level())
+            continue;
+
         if (IsSporkActive (SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
             nMasternode_Age = GetAdjustedTime() - mn.sigTime;
             if ((nMasternode_Age) < nMasternode_Min_Age) {
@@ -375,18 +415,46 @@ int CMasternodeMan::stable_size ()
     return nStable_size;
 }
 
-int CMasternodeMan::CountEnabled(int protocolVersion)
+int CMasternodeMan::CountEnabled(unsigned mnlevel, int protocolVersion)
 {
     int i = 0;
     protocolVersion = protocolVersion == -1 ? masternodePayments.GetMinMasternodePaymentsProto() : protocolVersion;
 
+    auto check_level = mnlevel != CMasternode::LevelValue::UNSPECIFIED;
+
     BOOST_FOREACH (CMasternode& mn, vMasternodes) {
         mn.Check();
         if (mn.protocolVersion < protocolVersion || !mn.IsEnabled()) continue;
+        if (check_level && mnlevel != mn.Level()) continue;
         i++;
     }
 
     return i;
+}
+
+std::map<unsigned, unsigned> CMasternodeMan::CountEnabledByLevels(int protocolVersion)
+{
+    if(protocolVersion == -1)
+        protocolVersion = masternodePayments.GetMinMasternodePaymentsProto();
+
+    std::map<unsigned, unsigned> result;
+
+    for(unsigned l = CMasternode::LevelValue::MIN; l <= CMasternode::LevelValue::MAX; ++l)
+        result.emplace(l, 0u);
+
+    for(auto& mn : vMasternodes)
+    {
+        mn.Check();
+
+        bool enabled = mn.protocolVersion >= protocolVersion && mn.IsEnabled();
+
+        if(!enabled)
+            continue;
+
+        ++result[mn.Level()];
+    };
+
+    return result;
 }
 
 void CMasternodeMan::CountNetworks(int protocolVersion, int& ipv4, int& ipv6, int& onion)
@@ -474,7 +542,7 @@ CMasternode* CMasternodeMan::Find(const CPubKey& pubKeyMasternode)
 //
 // Deterministically select the oldest/best masternode to pay on the network
 //
-CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCount)
+CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, unsigned mnlevel, bool fFilterSigTime, int& nCount)
 {
     LOCK(cs);
 
@@ -485,16 +553,19 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
         Make a vector with all of the last paid times
     */
 
-    int nMnCount = CountEnabled();
+    int nMnCount = CountEnabled(mnlevel);
     BOOST_FOREACH (CMasternode& mn, vMasternodes) {
         mn.Check();
+
+        if(mn.Level() != mnlevel) continue;
+
         if (!mn.IsEnabled()) continue;
 
         // //check protocol version
         if (mn.protocolVersion < masternodePayments.GetMinMasternodePaymentsProto()) continue;
 
         //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
-        if (masternodePayments.IsScheduled(mn, nBlockHeight)) continue;
+        if (masternodePayments.IsScheduled(mn, nMnCount, nBlockHeight)) continue;
 
         //it's too new, wait for a cycle
         if (fFilterSigTime && mn.sigTime + (nMnCount * 2.6 * 60) > GetAdjustedTime()) continue;
@@ -508,7 +579,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     nCount = (int)vecMasternodeLastPaid.size();
 
     //when the network is in the process of upgrading, don't penalize nodes that recently restarted
-    if (fFilterSigTime && nCount < nMnCount / 3) return GetNextMasternodeInQueueForPayment(nBlockHeight, false, nCount);
+    if (fFilterSigTime && nCount < nMnCount / 3) return GetNextMasternodeInQueueForPayment(nBlockHeight, mnlevel, false, nCount);
 
     // Sort them high to low
     sort(vecMasternodeLastPaid.rbegin(), vecMasternodeLastPaid.rend(), CompareLastPaid());
@@ -535,13 +606,13 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     return pBestMasternode;
 }
 
-CMasternode* CMasternodeMan::FindRandomNotInVec(std::vector<CTxIn>& vecToExclude, int protocolVersion)
+CMasternode* CMasternodeMan::FindRandomNotInVec(unsigned mnlevel, std::vector<CTxIn>& vecToExclude, int protocolVersion)
 {
     LOCK(cs);
 
     protocolVersion = protocolVersion == -1 ? masternodePayments.GetMinMasternodePaymentsProto() : protocolVersion;
 
-    int nCountEnabled = CountEnabled(protocolVersion);
+    int nCountEnabled = CountEnabled(mnlevel, protocolVersion);
     LogPrint("masternode", "CMasternodeMan::FindRandomNotInVec - nCountEnabled - vecToExclude.size() %d\n", nCountEnabled - vecToExclude.size());
     if (nCountEnabled - vecToExclude.size() < 1) return NULL;
 
@@ -550,6 +621,9 @@ CMasternode* CMasternodeMan::FindRandomNotInVec(std::vector<CTxIn>& vecToExclude
     bool found;
 
     BOOST_FOREACH (CMasternode& mn, vMasternodes) {
+        
+        if(mnlevel != CMasternode::LevelValue::UNSPECIFIED && mn.Level() != mnlevel) continue;
+
         if (mn.protocolVersion < protocolVersion || !mn.IsEnabled()) continue;
         found = false;
         BOOST_FOREACH (CTxIn& usedVin, vecToExclude) {
@@ -567,14 +641,19 @@ CMasternode* CMasternodeMan::FindRandomNotInVec(std::vector<CTxIn>& vecToExclude
     return NULL;
 }
 
-CMasternode* CMasternodeMan::GetCurrentMasterNode(int mod, int64_t nBlockHeight, int minProtocol)
+CMasternode* CMasternodeMan::GetCurrentMasterNode(unsigned mnlevel, int mod, int64_t nBlockHeight, int minProtocol)
 {
     int64_t score = 0;
     CMasternode* winner = NULL;
 
+    auto check_mnlevel = mnlevel != CMasternode::LevelValue::UNSPECIFIED;
+
     // scan for winner
     BOOST_FOREACH (CMasternode& mn, vMasternodes) {
         mn.Check();
+        
+        if(check_mnlevel && mn.Level() != mnlevel) continue;
+
         if (mn.protocolVersion < minProtocol || !mn.IsEnabled()) continue;
 
         // calculate the score for each Masternode
@@ -983,12 +1062,26 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
         // make sure it's still unspent
         //  - this is checked later by .check() in many places and by ThreadCheckObfuScationPool()
-
+        
         CValidationState state;
-        CMutableTransaction tx = CMutableTransaction();
+      /*CMutableTransaction tx = CMutableTransaction();
         CTxOut vout = CTxOut((GetMstrNodCollateral(chainActive.Height())-0.01) * COIN, obfuScationPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
+        */
+
+        CMutableTransaction tx;
+        {
+            TRY_LOCK(cs_main, lockMain);
+            if (!lockMain) {
+                return;
+            }
+
+            CValidationState state = CMasternodeMan::GetInputCheckingTx(vin, tx);
+            if (!state.IsValid()) {
+                return;
+            }
+        }
 
         bool fAcceptable = false;
         {

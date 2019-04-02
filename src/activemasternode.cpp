@@ -386,23 +386,38 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
 
         bool found = false;
         BOOST_FOREACH (COutput& out, possibleCoins) {
-            if (out.tx->GetHash() == txHash && out.i == outputIndex) {
-                selectedOutput = &out;
-                found = true;
-                break;
-            }
+            if (out.tx->GetHash() != txHash && out.i != outputIndex)
+                continue;
+
+            if(!CMasternode::Level(out.tx->vout[out.i].nValue, chainActive.Height()))
+                continue;
+
+            selectedOutput = &out;
+            found = true;
+            break;
         }
         if (!found) {
             LogPrintf("CActiveMasternode::GetMasterNodeVin - Could not locate valid vin\n");
             return false;
         }
     } else {
-        // No output specified,  Select the first one
-        if (possibleCoins.size() > 0) {
-            selectedOutput = &possibleCoins[0];
-        } else {
+        // No output specified,  Select the first one with the highest level.
+        if (!possibleCoins.size()) {
             LogPrintf("CActiveMasternode::GetMasterNodeVin - Could not locate specified vin from possible list\n");
             return false;
+        }
+        
+        selectedOutput = &possibleCoins[0];
+
+        auto selected_level = CMasternode::Level(selectedOutput->tx->vout[selectedOutput->i].nValue, chainActive.Height());
+
+        for(auto& out : possibleCoins) {
+
+            if(selected_level == 3u)
+                break;
+
+            if(CMasternode::Level(out.tx->vout[out.i].nValue, chainActive.Height()) > selected_level)
+                selectedOutput = &out;
         }
     }
 
@@ -472,9 +487,9 @@ vector<COutput> CActiveMasternode::SelectCoinsMasternode()
 
     // Filter
     BOOST_FOREACH (const COutput& out, vCoins) {
-        if (out.tx->vout[out.i].nValue == GetMstrNodCollateral(chainActive.Height())*COIN) { //exactly
+
+        if(CMasternode::IsDepositCoins(out.tx->vout[out.i].nValue))
             filteredCoins.push_back(out);
-        }
     }
     return filteredCoins;
 }

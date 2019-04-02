@@ -62,17 +62,20 @@ class CMasternodePayee
 {
 public:
     CScript scriptPubKey;
+    unsigned mnlevel;
     int nVotes;
 
     CMasternodePayee()
     {
         scriptPubKey = CScript();
+        mnlevel = CMasternode::LevelValue::UNSPECIFIED;
         nVotes = 0;
     }
 
-    CMasternodePayee(CScript payee, int nVotesIn)
+    CMasternodePayee(unsigned mnlevelIn, CScript payee, int nVotesIn)
     {
         scriptPubKey = payee;
+        mnlevel = mnlevelIn;
         nVotes = nVotesIn;
     }
 
@@ -82,6 +85,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
     {
         READWRITE(scriptPubKey);
+        READWRITE(mnlevel);
         READWRITE(nVotes);
     }
 };
@@ -104,7 +108,7 @@ public:
         vecPayments.clear();
     }
 
-    void AddPayee(CScript payeeIn, int nIncrement)
+    void AddPayee(unsigned mnlevel, CScript payeeIn, int nIncrement)
     {
         LOCK(cs_vecPayments);
 
@@ -115,13 +119,15 @@ public:
             }
         }
 
-        CMasternodePayee c(payeeIn, nIncrement);
+        CMasternodePayee c(mnlevel, payeeIn, nIncrement);
         vecPayments.push_back(c);
     }
 
-    bool GetPayee(CScript& payee)
+    bool GetPayee(unsigned mnlevel, CScript& payee)
     {
         LOCK(cs_vecPayments);
+
+        auto payment = vecPayments.cend();
 
         int nVotes = -1;
         BOOST_FOREACH (CMasternodePayee& p, vecPayments) {
@@ -129,6 +135,11 @@ public:
                 payee = p.scriptPubKey;
                 nVotes = p.nVotes;
             }
+        }
+
+        if(payment->mnlevel != mnlevel) {
+            //LogPrintf("CMasternodeBlockPayees::GetPayee() WRONG %s LEVEL FOUND!\n", CMasternode::mnlevelToString(mnlevel));
+            return false;
         }
 
         return (nVotes > -1);
@@ -167,12 +178,14 @@ public:
     int nBlockHeight;
     CScript payee;
     std::vector<unsigned char> vchSig;
+    unsigned payeeLevel;
 
     CMasternodePaymentWinner()
     {
         nBlockHeight = 0;
         vinMasternode = CTxIn();
         payee = CScript();
+        payeeLevel = CMasternode::LevelValue::UNSPECIFIED;
     }
 
     CMasternodePaymentWinner(CTxIn vinIn)
@@ -180,6 +193,7 @@ public:
         nBlockHeight = 0;
         vinMasternode = vinIn;
         payee = CScript();
+        payeeLevel = CMasternode::LevelValue::UNSPECIFIED;
     }
 
     uint256 GetHash()
@@ -197,9 +211,10 @@ public:
     bool SignatureValid();
     void Relay();
 
-    void AddPayee(CScript payeeIn)
+    void AddPayee(CScript payeeIn, unsigned payeeLevelIn)
     {
         payee = payeeIn;
+        payeeLevel = payeeLevelIn;
     }
 
 
@@ -219,7 +234,7 @@ public:
         std::string ret = "";
         ret += vinMasternode.ToString();
         ret += ", " + boost::lexical_cast<std::string>(nBlockHeight);
-        ret += ", " + payee.ToString();
+        ret += ", " + boost::lexical_cast<std::string>(payeeLevel) + ":" + payee.ToString();
         ret += ", " + boost::lexical_cast<std::string>((int)vchSig.size());
         return ret;
     }
@@ -261,11 +276,11 @@ public:
     void CleanPaymentList();
     int LastPayment(CMasternode& mn);
 
-    bool GetBlockPayee(int nBlockHeight, CScript& payee);
+    bool GetBlockPayee(int nBlockHeight, unsigned mnlevel, CScript& payee);
     bool IsTransactionValid(const CTransaction& txNew, int nBlockHeight);
-    bool IsScheduled(CMasternode& mn, int nNotBlockHeight);
+    bool IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight);
 
-    bool CanVote(COutPoint outMasternode, int nBlockHeight)
+    /*bool CanVote(COutPoint outMasternode, int nBlockHeight)
     {
         LOCK(cs_mapMasternodePayeeVotes);
 
@@ -279,7 +294,8 @@ public:
         mapMasternodesLastVote[outMasternode.hash + outMasternode.n] = nBlockHeight;
         return true;
     }
-
+    */
+    bool CanVote(const COutPoint& outMasternode, int nBlockHeight, unsigned mnlevel);
     int GetMinMasternodePaymentsProto();
     void ProcessMessageMasternodePayments(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
     std::string GetRequiredPaymentsString(int nBlockHeight);

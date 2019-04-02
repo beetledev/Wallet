@@ -63,6 +63,7 @@ CCriticalSection cs_main;
 
 BlockMap mapBlockIndex;
 map<uint256, uint256> mapProofOfStake;
+map<COutPoint, int> mapStakeSpent;
 set<pair<COutPoint, unsigned int> > setStakeSeen;
 map<unsigned int, unsigned int> mapHashedBlocks;
 CChain chainActive;
@@ -178,6 +179,10 @@ int nQueuedValidatedHeaders = 0;
 
 /** Number of preferable block download peers. */
 int nPreferredDownload = 0;
+
+/** Treasury variables. */
+int nStartTreasuryBlock = 281857;
+int nTreasuryBlockStep = 1440;
 
 /** Dirty block index entries. */
 set<CBlockIndex*> setDirtyBlockIndex;
@@ -2121,41 +2126,128 @@ int64_t GetBlockValue(int nHeight)
 {
     int64_t nSubsidy = 0;
 
-      if (nHeight == 0) {
-	nSubsidy = 200000 * COIN;
-      } else if (nHeight < 9) {
+    if(IsTreasuryBlock(nHeight)) {
+        LogPrintf("GetBlockValue(): this is a treasury block\n");
+        nSubsidy = GetTreasuryAward(nHeight);
+
+    } else { 
+
+    if (nHeight == 0) {
+	   
+        nSubsidy = 200000 * COIN;
+    
+    } else if (nHeight < 9) {
+        
         nSubsidy = 20000000 * COIN;
-      } else if (nHeight < 2501) {
-	nSubsidy = 5 * COIN;
-      } else {
-	nSubsidy = 75 * COIN;
-      }
+    
+    } else if (nHeight < 2501) {
+	
+        nSubsidy = 5 * COIN;
+    
+    } else {
+    
+        nSubsidy = 75 * COIN;
+    }
 
 	int64_t nMoneySupply = chainActive.Tip()->nMoneySupply;
+    int nSubsidyHalvingInterval = 1051200;
+
+    if (nMoneySupply + nSubsidy >= 250000000) {
+        int halvings = nHeight / nSubsidyHalvingInterval;
+        // Do a first "manual" halving when we reach 250 million supply.
+        nSubsidy = 37 * COIN;
+        // Force block reward to zero when right shift is undefined.
+        if (halvings >= 64) {
+            
+            return 0;
+        
+        }
+        // Subsidy is cut in half every 1051200 blocks which will occur approximately every 2 years.
+        nSubsidy >>= halvings;
+        //Ignore the next halving until we don't reach 449728000 supply.
+        if (nMoneySupply + nSubsidy <= 449728000) {
+            
+            nSubsidy = 9 * COIN;
+        
+        }
+    }
 
 	if (nMoneySupply + nSubsidy >= Params().MaxMoneyOut())
   		nSubsidy = Params().MaxMoneyOut() - nMoneySupply;
 
   	if (nMoneySupply >= Params().MaxMoneyOut())
   		nSubsidy = 0;
-
+    }
   	return nSubsidy;
 
 }
 
-int64_t GetMasternodePayment(int nHeight, int64_t blockValue, int nMasternodeCount)
+int64_t GetMasternodePayment(int nHeight, unsigned mnlevel, int64_t blockValue)
 {
 
 	int64_t ret = 0;
 
 	if (nHeight <= 101) {
 		ret = blockValue  * 0;
-	} else {
-		ret = blockValue  * 0.85;
-	}
+	} else if (nHeight <= 281857) {
+        switch(mnlevel) {
+            case 1: ret = blockValue * 0;
+            case 2: ret = blockValue * 0;
+            case 3: ret = blockValue * 0.85;
+        }
+    } else {
+        switch(mnlevel) {
+            case 1: ret = blockValue * 0.04;
+            case 2: ret = blockValue * 0.19;
+            case 3: ret = blockValue * 0.65;
+        }
+    }
 
 	return ret;
 
+}
+
+ bool IsTreasuryBlock(int nHeight)
+{
+    if(nHeight < nStartTreasuryBlock) {
+        return false;
+    } else if( (nHeight-nStartTreasuryBlock) % nTreasuryBlockStep == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+ int64_t GetTreasuryAward(int nHeight)
+{
+    
+    int64_t nMoneySupply = chainActive.Tip()->nMoneySupply;
+    int64_t nSubsidy = 0;
+    int nSubsidyHalvingInterval = 1051200;
+    nSubsidy = 75 * COIN;
+
+    if (nMoneySupply + nSubsidy >= 250000000) {
+        int halvings = nHeight / nSubsidyHalvingInterval;
+        //Initial halving when we reach 250 million supply.
+        nSubsidy = 37 * COIN;
+        // Force block reward to zero when right shift is undefined.
+        if (halvings >= 64) {
+            return 0;
+        }
+        // Subsidy is cut in half every 1051200 blocks which will occur approximately every 2 years.
+        nSubsidy >>= halvings;
+    }
+
+    if(IsTreasuryBlock(nHeight)) {
+        if(nHeight == nStartTreasuryBlock) {
+            return nSubsidy * 1440 * 0.1; //10800 for the first treasury block
+        }
+        else {
+            return nSubsidy * 1440 * 0.1; //prolly the same and something less for each next block
+        }
+    } else {
+        return 0;
+    }
 }
 
 bool IsInitialBlockDownload()
@@ -2529,6 +2621,8 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 if (coins->vout.size() < out.n + 1)
                     coins->vout.resize(out.n + 1);
                 coins->vout[out.n] = undo.txout;
+                // erase the spent input
+                mapStakeSpent.erase(out);
             }
         }
     }
@@ -3002,6 +3096,28 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (fTxIndex)
         if (!pblocktree->WriteTxIndex(vPos))
             return state.Abort("Failed to write transaction index");
+
+    
+    for (const CTransaction tx: block.vtx) {
+        if (tx.IsCoinBase())
+            continue;
+        for (const CTxIn in: tx.vin) {
+            LogPrint("map", "mapStakeSpent: Insert %s | %u\n", in.prevout.ToString(), pindex->nHeight);
+            mapStakeSpent.insert(std::make_pair(in.prevout, pindex->nHeight));
+        }
+    }
+
+
+     // delete old entries
+    for (auto it = mapStakeSpent.begin(); it != mapStakeSpent.end();) {
+        if (it->second < pindex->nHeight - Params().MaxReorganizationDepth()) {
+            LogPrint("map", "mapStakeSpent: Erase %s | %u\n", it->first.ToString(), it->second);
+            it = mapStakeSpent.erase(it);
+        }
+        else {
+            it++;
+        }
+    }
 
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
@@ -4168,6 +4284,55 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
     }
 
     int nHeight = pindex->nHeight;
+
+    if (block.IsProofOfStake()) {
+        LOCK(cs_main);
+
+         CCoinsViewCache coins(pcoinsTip);
+
+         if (!coins.HaveInputs(block.vtx[1])) {
+            // the inputs are spent at the chain tip so we should look at the recently spent outputs
+
+             for (CTxIn in : block.vtx[1].vin) {
+                auto it = mapStakeSpent.find(in.prevout);
+                if (it == mapStakeSpent.end()) {
+                    return false;
+                }
+                if (it->second <= pindexPrev->nHeight) {
+                    return false;
+                }
+            }
+        }
+
+         // if this is on a fork
+        if (!chainActive.Contains(pindexPrev) && pindexPrev != NULL) {
+            // start at the block we're adding on to
+            CBlockIndex *last = pindexPrev;
+
+             // while that block is not on the main chain
+            while (!chainActive.Contains(last) && pindexPrev != NULL) {
+                CBlock bl;
+                ReadBlockFromDisk(bl, last);
+                // loop through every spent input from said block
+                for (CTransaction t : bl.vtx) {
+                    for (CTxIn in: t.vin) {
+                        // loop through every spent input in the staking transaction of the new block
+                        for (CTxIn stakeIn : block.vtx[1].vin) {
+                            // if they spend the same input
+                            if (stakeIn.prevout == in.prevout) {
+                                // reject the block
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+
+                 // go to the parent block
+                last = pindexPrev->pprev;
+            }
+        }
+    }
 
     // Write block to history file
     try {

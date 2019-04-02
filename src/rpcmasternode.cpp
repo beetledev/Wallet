@@ -120,7 +120,7 @@ Value getpoolinfo(const Array& params, bool fHelp)
             HelpExampleCli("getpoolinfo", "") + HelpExampleRpc("getpoolinfo", ""));
 
     Object obj;
-    obj.push_back(Pair("current_masternode", mnodeman.GetCurrentMasterNode()->addr.ToString()));
+    obj.push_back(Pair("current_masternode", mnodeman.GetCurrentMasterNode(CMasternode::LevelValue::UNSPECIFIED)->addr.ToString()));
     obj.push_back(Pair("state", obfuScationPool.GetState()));
     obj.push_back(Pair("entries", obfuScationPool.GetEntriesCount()));
     obj.push_back(Pair("entries_accepted", obfuScationPool.GetCountEntriesAccepted()));
@@ -252,6 +252,7 @@ Value listmasternodes(const Array& params, bool fHelp)
             "\nResult:\n"
             "[\n"
             "  {\n"
+            "    \"level\": n,          (numeric) Masternode Level\n"
             "    \"rank\": n,           (numeric) Masternode Rank (or 0 if not enabled)\n"
             "    \"txhash\": \"hash\",    (string) Collateral transaction hash\n"
             "    \"outidx\": n,         (numeric) Collateral transaction output index\n"
@@ -289,6 +290,7 @@ Value listmasternodes(const Array& params, bool fHelp)
                 mn->Status().find(strFilter) == string::npos &&
                 CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString().find(strFilter) == string::npos) continue;
 
+            std::string strLevel = std::to_string(mn->Level());
             std::string strStatus = mn->Status();
             std::string strHost;
             int port;
@@ -296,6 +298,8 @@ Value listmasternodes(const Array& params, bool fHelp)
             CNetAddr node = CNetAddr(strHost, false);
             std::string strNetwork = GetNetworkName(node.GetNetwork());
 
+            //obj.push_back(Pair("level", (int)mn->Level()));
+            obj.push_back(Pair("level", strLevel));
             obj.push_back(Pair("rank", (strStatus == "ENABLED" ? s.first : 0)));
             obj.push_back(Pair("network", strNetwork));
             obj.push_back(Pair("txhash", strTxHash));
@@ -363,8 +367,11 @@ Value getmasternodecount (const Array& params, bool fHelp)
     int nCount = 0;
     int ipv4 = 0, ipv6 = 0, onion = 0;
 
-    if (chainActive.Tip())
-        mnodeman.GetNextMasternodeInQueueForPayment(chainActive.Tip()->nHeight, true, nCount);
+
+    for(unsigned l = CMasternode::LevelValue::MIN; l <= CMasternode::LevelValue::MAX; ++l) {
+        if (chainActive.Tip())
+            mnodeman.GetNextMasternodeInQueueForPayment(chainActive.Tip()->nHeight, l,true, nCount);
+    }
 
     mnodeman.CountNetworks(ActiveProtocol(), ipv4, ipv6, onion);
 
@@ -389,6 +396,7 @@ Value masternodecurrent (const Array& params, bool fHelp)
 
             "\nResult:\n"
             "{\n"
+            "  \"level\": xxxx,         (numeric) MN level\n"
             "  \"protocol\": xxxx,        (numeric) Protocol version\n"
             "  \"txhash\": \"xxxx\",      (string) Collateral transaction hash\n"
             "  \"pubkey\": \"xxxx\",      (string) MN Public key\n"
@@ -398,17 +406,25 @@ Value masternodecurrent (const Array& params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("masternodecurrent", "") + HelpExampleRpc("masternodecurrent", ""));
 
-    CMasternode* winner = mnodeman.GetCurrentMasterNode(1);
-    if (winner) {
-        Object obj;
+    Array result;
+    for(unsigned l = CMasternode::LevelValue::MIN; l <= CMasternode::LevelValue::MAX; ++l) {
+        CMasternode* winner = mnodeman.GetCurrentMasterNode(l, 1);
+        
+        if(!winner)
+            continue;
 
+        Object obj;
+        std::string strLevel = std::to_string(winner->Level());
+
+        obj.push_back(Pair("level", strLevel));        
         obj.push_back(Pair("protocol", (int64_t)winner->protocolVersion));
         obj.push_back(Pair("txhash", winner->vin.prevout.hash.ToString()));
         obj.push_back(Pair("pubkey", CBitcoinAddress(winner->pubKeyCollateralAddress.GetID()).ToString()));
         obj.push_back(Pair("lastseen", (winner->lastPing == CMasternodePing()) ? winner->sigTime : (int64_t)winner->lastPing.sigTime));
         obj.push_back(Pair("activeseconds", (winner->lastPing == CMasternodePing()) ? 0 : (int64_t)(winner->lastPing.sigTime - winner->sigTime)));
-        return obj;
+        result.push_back(obj);
     }
+    return result;
 
     throw runtime_error("unknown");
 }
