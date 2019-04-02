@@ -466,7 +466,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
 
     // Find possible candidates
     std::vector<COutput> vPossibleCoins;
-    AvailableCoins(vPossibleCoins, true, NULL, false, ONLY_10000);
+    AvailableCoins(vPossibleCoins, true, NULL, false, ONLY_DEPOSIT);
     if (vPossibleCoins.empty()) {
         LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
         return false;
@@ -1624,14 +1624,14 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
                 bool found = false;
                 if (nCoinType == ONLY_DENOMINATED) {
                     found = IsDenominatedAmount(pcoin->vout[i].nValue);
-                } else if (nCoinType == ONLY_NOT10000IFMN) {
-                    found = !(fMasterNode && pcoin->vout[i].nValue == GetMstrNodCollateral(chainActive.Height())*COIN);
-                } else if (nCoinType == ONLY_NONDENOMINATED_NOT10000IFMN) {
+                } else if (nCoinType == ONLY_NOTDEPOSITIFMN) {
+                    found = !(fMasterNode && CMasternode::IsDepositCoins(pcoin->vout[i].nValue));
+                } else if (nCoinType == ONLY_NONDENOMINATED_NOTDEPOSITIFMN) {
                     if (IsCollateralAmount(pcoin->vout[i].nValue)) continue; // do not use collateral amounts
                     found = !IsDenominatedAmount(pcoin->vout[i].nValue);
-                    if (found && fMasterNode) found = pcoin->vout[i].nValue != GetMstrNodCollateral(chainActive.Height())*COIN; // do not use Hot MN funds
-                } else if (nCoinType == ONLY_10000) {
-                    found = pcoin->vout[i].nValue == GetMstrNodCollateral(chainActive.Height())*COIN;
+                    if (found && fMasterNode) found = !CMasternode::IsDepositCoins(pcoin->vout[i].nValue); // do not use Hot MN funds
+                } else if (nCoinType == ONLY_DEPOSIT) {
+                    found = CMasternode::IsDepositCoins(pcoin->vout[i].nValue);
                 } else {
                     found = true;
                 }
@@ -1650,7 +1650,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
                 if (mine == ISMINE_WATCH_ONLY)
                     continue;
 
-                if (IsLockedCoin((*it).first, i) && nCoinType != ONLY_10000)
+                if (IsLockedCoin((*it).first, i) && nCoinType != ONLY_DEPOSIT)
                     continue;
                 if (pcoin->vout[i].nValue <= 0 && !fIncludeZeroValue)
                     continue;
@@ -2084,7 +2084,7 @@ bool CWallet::SelectCoinsDark(CAmount nValueMin, CAmount nValueMax, std::vector<
     nValueRet = 0;
 
     vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, coinControl, nObfuscationRoundsMin < 0 ? ONLY_NONDENOMINATED_NOT10000IFMN : ONLY_DENOMINATED);
+    AvailableCoins(vCoins, true, coinControl, nObfuscationRoundsMin < 0 ? ONLY_NONDENOMINATED_NOTDEPOSITIFMN : ONLY_DENOMINATED);
 
     set<pair<const CWalletTx*, unsigned int> > setCoinsRet2;
 
@@ -2369,9 +2369,9 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
                 if (!SelectCoins(nTotalValue, setCoins, nValueIn, coinControl, coin_type, useIX)) {
                     if (coin_type == ALL_COINS) {
                         strFailReason = _("Insufficient funds.");
-                    } else if (coin_type == ONLY_NOT10000IFMN) {
+                    } else if (coin_type == ONLY_NOTDEPOSITIFMN) {
                         strFailReason = _("Unable to locate enough funds for this transaction that are not equal 10000 BEETLECOIN.");
-                    } else if (coin_type == ONLY_NONDENOMINATED_NOT10000IFMN) {
+                    } else if (coin_type == ONLY_NONDENOMINATED_NOTDEPOSITIFMN) {
                         strFailReason = _("Unable to locate enough Obfuscation non-denominated funds for this transaction that are not equal 10000 BEETLECOIN.");
                     } else {
                         strFailReason = _("Unable to locate enough Obfuscation denominated funds for this transaction.");

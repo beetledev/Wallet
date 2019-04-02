@@ -23,6 +23,7 @@
 #include "validationinterface.h"
 #include "wallet_ismine.h"
 #include "walletdb.h"
+#include "masternode.h"
 
 #include <algorithm>
 #include <map>
@@ -79,10 +80,10 @@ enum WalletFeature {
 enum AvailableCoinsType {
     ALL_COINS = 1,
     ONLY_DENOMINATED = 2,
-    ONLY_NOT10000IFMN = 3,
-    ONLY_NONDENOMINATED_NOT10000IFMN = 4, // ONLY_NONDENOMINATED and not 10000 BEETLECOIN at the same time
-    ONLY_10000 = 5,                        // find masternode outputs including locked ones (use with caution)
-    STAKABLE_COINS = 6                          // UTXO's that are valid for staking
+    ONLY_NOTDEPOSITIFMN = 3,
+    ONLY_NONDENOMINATED_NOTDEPOSITIFMN = 4, // ONLY_NONDENOMINATED and not deposit esbcoin at the same time
+    ONLY_DEPOSIT = 5,                       // find masternode outputs including locked ones (use with caution)
+    STAKABLE_COINS = 6                      // UTXO's that are valid for staking
 };
 
 // Possible states for zBEET send
@@ -1051,7 +1052,8 @@ public:
             const CTxIn vin = CTxIn(hashTx, i);
 
             if (pwallet->IsSpent(hashTx, i) || pwallet->IsLockedCoin(hashTx, i)) continue;
-            if (fMasterNode && vout[i].nValue == GetMstrNodCollateral(chainActive.Height())*COIN) continue; // do not count MN-like outputs
+            if (fMasterNode && CMasternode::IsDepositCoins(vout[i].nValue))
+                continue; // do not count MN-like outputs
 
             const int rounds = pwallet->GetInputObfuscationRounds(vin);
             if (rounds >= -2 && rounds < nZeromintPercentage) {

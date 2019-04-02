@@ -96,7 +96,7 @@ void MasternodeList::StartAlias(std::string strAlias)
             std::string strError;
             CMasternodeBroadcast mnb;
 
-            bool fSuccess = activeMasternode.Register(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError);
+            bool fSuccess = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
 
             if (fSuccess) {
                 strStatusHtml += "<br>Successfully started masternode.";
@@ -136,7 +136,7 @@ void MasternodeList::StartAll(std::string strCommand)
 
         if (strCommand == "start-missing" && pmn) continue;
 
-        bool fSuccess = activeMasternode.Register(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError);
+        bool fSuccess = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
 
         if (fSuccess) {
             nCountSuccessful++;
@@ -168,6 +168,8 @@ void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, C
     bool fOldRowFound = false;
     int nNewRow = 0;
 
+    std::string mnLevelText = "";
+
     for (int i = 0; i < ui->tableWidgetMyMasternodes->rowCount(); i++) {
         if (ui->tableWidgetMyMasternodes->item(i, 0)->text() == strAlias) {
             fOldRowFound = true;
@@ -181,8 +183,18 @@ void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, C
         ui->tableWidgetMyMasternodes->insertRow(nNewRow);
     }
 
+    if (pmn){
+        switch (pmn->Level())
+        {
+            case 1: mnLevelText = "Basic Node"; break;
+            case 2: mnLevelText = "Classic Node"; break;
+            case 3: mnLevelText = "Standard Node"; break;
+        }
+    }
+
     QTableWidgetItem* aliasItem = new QTableWidgetItem(strAlias);
     QTableWidgetItem* addrItem = new QTableWidgetItem(pmn ? QString::fromStdString(pmn->addr.ToString()) : strAddr);
+    QTableWidgetItem* levelItem = new QTableWidgetItem(QString::fromStdString(mnLevelText));
     QTableWidgetItem* protocolItem = new QTableWidgetItem(QString::number(pmn ? pmn->protocolVersion : -1));
     QTableWidgetItem* statusItem = new QTableWidgetItem(QString::fromStdString(pmn ? pmn->GetStatus() : "MISSING"));
     GUIUtil::DHMSTableWidgetItem* activeSecondsItem = new GUIUtil::DHMSTableWidgetItem(pmn ? (pmn->lastPing.sigTime - pmn->sigTime) : 0);
@@ -191,11 +203,12 @@ void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, C
 
     ui->tableWidgetMyMasternodes->setItem(nNewRow, 0, aliasItem);
     ui->tableWidgetMyMasternodes->setItem(nNewRow, 1, addrItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 2, protocolItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 3, statusItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 4, activeSecondsItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 5, lastSeenItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 6, pubkeyItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 2, levelItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 3, protocolItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 4, statusItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 5, activeSecondsItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 6, lastSeenItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 7, pubkeyItem);
 }
 
 void MasternodeList::updateMyNodeList(bool fForce)
@@ -252,10 +265,21 @@ void MasternodeList::updateNodeList()
     ui->tableWidgetMasternodes->setRowCount(0);
     std::vector<CMasternode> vMasternodes = mnodeman.GetFullMasternodeVector();
 
+    std::string mnLevelText = "";
+
     BOOST_FOREACH (CMasternode& mn, vMasternodes) {
+
+        switch (mn.Level())
+        {
+            case 1: mnLevelText = "Basic Node"; break;
+            case 2: mnLevelText = "Classic Node"; break;
+            case 3: mnLevelText = "Standard Node"; break;
+        }
+
         // populate list
         // Address, Protocol, Status, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem* addressItem = new QTableWidgetItem(QString::fromStdString(mn.addr.ToString()));
+        QTableWidgetItem* levelItem = new QTableWidgetItem(QString::fromStdString(mnLevelText));
         QTableWidgetItem* protocolItem = new QTableWidgetItem(QString::number(mn.protocolVersion));
         QTableWidgetItem* statusItem = new QTableWidgetItem(QString::fromStdString(mn.GetStatus()));
         GUIUtil::DHMSTableWidgetItem* activeSecondsItem = new GUIUtil::DHMSTableWidgetItem(mn.lastPing.sigTime - mn.sigTime);
@@ -274,11 +298,12 @@ void MasternodeList::updateNodeList()
 
         ui->tableWidgetMasternodes->insertRow(0);
         ui->tableWidgetMasternodes->setItem(0, 0, addressItem);
-        ui->tableWidgetMasternodes->setItem(0, 1, protocolItem);
-        ui->tableWidgetMasternodes->setItem(0, 2, statusItem);
-        ui->tableWidgetMasternodes->setItem(0, 3, activeSecondsItem);
-        ui->tableWidgetMasternodes->setItem(0, 4, lastSeenItem);
-        ui->tableWidgetMasternodes->setItem(0, 5, pubkeyItem);
+        ui->tableWidgetMasternodes->setItem(0, 1, levelItem);
+        ui->tableWidgetMasternodes->setItem(0, 2, protocolItem);
+        ui->tableWidgetMasternodes->setItem(0, 3, statusItem);
+        ui->tableWidgetMasternodes->setItem(0, 4, activeSecondsItem);
+        ui->tableWidgetMasternodes->setItem(0, 5, lastSeenItem);
+        ui->tableWidgetMasternodes->setItem(0, 6, pubkeyItem);
     }
 
     ui->countLabel->setText(QString::number(ui->tableWidgetMasternodes->rowCount()));

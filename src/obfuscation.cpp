@@ -81,7 +81,7 @@ void CObfuscationPool::ProcessMessageObfuscation(CNode* pfrom, std::string& strC
 
         if (sessionUsers == 0) {
             if (pmn->nLastDsq != 0 &&
-                pmn->nLastDsq + mnodeman.CountEnabled(ActiveProtocol()) / 5 > mnodeman.nDsqCount) {
+                pmn->nLastDsq + mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) / 5 > mnodeman.nDsqCount) {
                 LogPrintf("dsa -- last dsq too recent, must wait. %s \n", pfrom->addr.ToString());
                 errorID = ERR_RECENT;
                 pfrom->PushMessage("dssu", sessionID, GetState(), GetEntriesCount(), MASTERNODE_REJECTED, errorID);
@@ -139,7 +139,7 @@ void CObfuscationPool::ProcessMessageObfuscation(CNode* pfrom, std::string& strC
             LogPrint("obfuscation", "dsq last %d last2 %d count %d\n", pmn->nLastDsq, pmn->nLastDsq + mnodeman.size() / 5, mnodeman.nDsqCount);
             //don't allow a few nodes to dominate the queuing process
             if (pmn->nLastDsq != 0 &&
-                pmn->nLastDsq + mnodeman.CountEnabled(ActiveProtocol()) / 5 > mnodeman.nDsqCount) {
+                pmn->nLastDsq + mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) / 5 > mnodeman.nDsqCount) {
                 LogPrint("obfuscation", "dsq -- Masternode sending too many dsq messages. %s \n", pmn->addr.ToString());
                 return;
             }
@@ -1520,7 +1520,7 @@ bool CObfuscationPool::DoAutomaticDenominating(bool fDryRun)
         }
 
         //if we've used 90% of the Masternode list then drop all the oldest first
-        int nThreshold = (int)(mnodeman.CountEnabled(ActiveProtocol()) * 0.9);
+        int nThreshold = (int)(mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) * 0.9);
         LogPrint("obfuscation", "Checking vecMasternodesUsed size %d threshold %d\n", (int)vecMasternodesUsed.size(), nThreshold);
         while ((int)vecMasternodesUsed.size() > nThreshold) {
             vecMasternodesUsed.erase(vecMasternodesUsed.begin());
@@ -1599,7 +1599,7 @@ bool CObfuscationPool::DoAutomaticDenominating(bool fDryRun)
 
         // otherwise, try one randomly
         while (i < 10) {
-            CMasternode* pmn = mnodeman.FindRandomNotInVec(vecMasternodesUsed, ActiveProtocol());
+            CMasternode* pmn = mnodeman.FindRandomNotInVec(CMasternode::LevelValue::UNSPECIFIED, vecMasternodesUsed, ActiveProtocol());
             if (pmn == NULL) {
                 LogPrintf("DoAutomaticDenominating --- Can't find random masternode!\n");
                 strAutoDenomResult = _("Can't find random Masternode.");
@@ -1607,7 +1607,7 @@ bool CObfuscationPool::DoAutomaticDenominating(bool fDryRun)
             }
 
             if (pmn->nLastDsq != 0 &&
-                pmn->nLastDsq + mnodeman.CountEnabled(ActiveProtocol()) / 5 > mnodeman.nDsqCount) {
+                pmn->nLastDsq + mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) / 5 > mnodeman.nDsqCount) {
                 i++;
                 continue;
             }
@@ -1728,16 +1728,16 @@ bool CObfuscationPool::MakeCollateralAmounts()
 
     // try to use non-denominated and not mn-like funds
     bool success = pwalletMain->CreateTransaction(vecSend, wtx, reservekeyChange,
-        nFeeRet, strFail, &coinControl, ONLY_NONDENOMINATED_NOT10000IFMN);
+        nFeeRet, strFail, &coinControl, ONLY_NONDENOMINATED_NOTDEPOSITIFMN);
     if (!success) {
         // if we failed (most likeky not enough funds), try to use all coins instead -
         // MN-like funds should not be touched in any case and we can't mix denominated without collaterals anyway
         CCoinControl* coinControlNull = NULL;
-        LogPrintf("MakeCollateralAmounts: ONLY_NONDENOMINATED_NOT10000IFMN Error - %s\n", strFail);
+        LogPrintf("MakeCollateralAmounts: ONLY_NONDENOMINATED_NOTDEPOSITIFMN Error - %s\n", strFail);
         success = pwalletMain->CreateTransaction(vecSend, wtx, reservekeyChange,
-            nFeeRet, strFail, coinControlNull, ONLY_NOT10000IFMN);
+            nFeeRet, strFail, coinControlNull, ONLY_NOTDEPOSITIFMN);
         if (!success) {
-            LogPrintf("MakeCollateralAmounts: ONLY_NOT10000IFMN Error - %s\n", strFail);
+            LogPrintf("MakeCollateralAmounts: ONLY_NOTDEPOSITIFMN Error - %s\n", strFail);
             reservekeyCollateral.ReturnKey();
             return false;
         }
@@ -1815,7 +1815,7 @@ bool CObfuscationPool::CreateDenominated(CAmount nTotalValue)
 
     CCoinControl* coinControl = NULL;
     bool success = pwalletMain->CreateTransaction(vecSend, wtx, reservekeyChange,
-        nFeeRet, strFail, coinControl, ONLY_NONDENOMINATED_NOT10000IFMN);
+        nFeeRet, strFail, coinControl, ONLY_NONDENOMINATED_NOTDEPOSITIFMN);
     if (!success) {
         LogPrintf("CreateDenominated: Error - %s\n", strFail);
         // TODO: return reservekeyDenom here

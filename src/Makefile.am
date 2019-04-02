@@ -1,4 +1,4 @@
-DIST_SUBDIRS = secp256k1
+haDIST_SUBDIRS = secp256k1
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS)
 
 
@@ -297,6 +297,8 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/hamsi.c \
   crypto/fugue.c \
   crypto/sha2.c \
+  crypto/sph_md_helper.c \
+  crypto/hamsi_helper.c \
   crypto/common.h \
   crypto/sha256.h \
   crypto/sha512.h \
