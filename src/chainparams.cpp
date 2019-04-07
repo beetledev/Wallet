@@ -2,7 +2,7 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2017 The BeetleCoin developers
+// Copyright (c) 2018-2019 The BeetleCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -117,6 +117,8 @@ public:
         nMaturity = 15;
         nMasternodeCountDrift = 20;
         nMaxMoneyOut = 500000000 * COIN;
+        nMaxMoneyOutQuarter = 250000000 * COIN;
+        nMaxMoneyOutHalf = 449728000 * COIN;
 
         nLastPOWBlock = 200;
         nModifierUpdateBlock = 999999999;
