@@ -81,7 +81,7 @@ enum AvailableCoinsType {
     ALL_COINS = 1,
     ONLY_DENOMINATED = 2,
     ONLY_NOTDEPOSITIFMN = 3,
-    ONLY_NONDENOMINATED_NOTDEPOSITIFMN = 4, // ONLY_NONDENOMINATED and not deposit esbcoin at the same time
+    ONLY_NONDENOMINATED_NOTDEPOSITIFMN = 4, // ONLY_NONDENOMINATED and not deposit beetlecoin at the same time
     ONLY_DEPOSIT = 5,                       // find masternode outputs including locked ones (use with caution)
     STAKABLE_COINS = 6                      // UTXO's that are valid for staking
 };
@@ -102,7 +102,7 @@ enum ZerocoinSpendStatus {
     ZBEETLECOIN_FAILED_ACCUMULATOR_INITIALIZATION = 11,    // Failed to initialize witness
     ZBEETLECOIN_INVALID_WITNESS = 12,                      // Spend coin transaction did not verify
     ZBEETLECOIN_BAD_SERIALIZATION = 13,                    // Transaction verification failed
-    ZBEETLECOIN_SPENT_USED_ZBEETLECOIN = 14                       // Coin has already been spend
+    ZBEETLECOIN_SPENT_USED_ZBEETLECOIN = 14                // Coin has already been spent
 };
 
 struct CompactTallyItem {
