@@ -71,7 +71,6 @@ src/qt/beetlecoin-qt.includes
 *.trs
 *.dmg
 
-*.json.h
 *.raw.h
 
 #libtool object files
