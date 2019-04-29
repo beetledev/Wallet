@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,7 +28,7 @@
 #include <QSettings>
 #include <QTextDocument>
 
-SendCoinsDialog::SendCoinsDialog(QWidget* parent) : QDialog(parent),
+SendCoinsDialog::SendCoinsDialog(QWidget* parent) : QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint),
                                                     ui(new Ui::SendCoinsDialog),
                                                     clientModel(0),
                                                     model(0),
@@ -262,15 +262,14 @@ void SendCoinsDialog::on_sendButton_clicked()
     if (CoinControlDialog::coinControl->fSplitBlock)
         CoinControlDialog::coinControl->nSplitBlock = int(ui->splitBlockLineEdit->text().toInt());
 
-    QString strFunds = tr("using") + " <b>" + tr("anonymous funds") + "</b>";
+    QString strFunds = "";
     QString strFee = "";
     recipients[0].inputType = ALL_COINS;
-    strFunds = tr("using") + " <b>" + tr("any available funds (not recommended)") + "</b>";
 
     if (ui->checkSwiftTX->isChecked()) {
         recipients[0].useSwiftTX = true;
         strFunds += " ";
-        strFunds += tr("and SwiftX");
+        strFunds += tr("using SwiftX");
     } else {
         recipients[0].useSwiftTX = false;
     }
@@ -307,7 +306,7 @@ void SendCoinsDialog::on_sendButton_clicked()
             recipientElement = tr("%1 to %2").arg(amount, address);
         }
 
-        if (fSplitBlock) {
+        if (CoinControlDialog::coinControl->fSplitBlock) {
             recipientElement.append(tr(" split into %1 outputs using the UTXO splitter.").arg(CoinControlDialog::coinControl->nSplitBlock));
         }
 
@@ -322,7 +321,7 @@ void SendCoinsDialog::on_sendButton_clicked()
     // will call relock
     WalletModel::EncryptionStatus encStatus = model->getEncryptionStatus();
     if (encStatus == model->Locked || encStatus == model->UnlockedForAnonymizationOnly) {
-        WalletModel::UnlockContext ctx(model->requestUnlock(true));
+        WalletModel::UnlockContext ctx(model->requestUnlock(AskPassphraseDialog::Context::Send_BEET, true));
         if (!ctx.isValid()) {
             // Unlock wallet was cancelled
             fNewRecipientAllowed = true;
@@ -640,7 +639,7 @@ void SendCoinsDialog::processSendCoinsReturn(const WalletModel::SendCoinsReturn&
 
     // Unlock wallet if it wasn't fully unlocked already
     if(fAskForUnlock) {
-        model->requestUnlock(false);
+        model->requestUnlock(AskPassphraseDialog::Context::Unlock_Full, false);
         if(model->getEncryptionStatus () != WalletModel::Unlocked) {
             msgParams.first = tr("Error: The wallet was unlocked only to anonymize coins. Unlock canceled.");
         }

@@ -13,22 +13,22 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="topLayout">
+  <layout class="QVBoxLayout" name="topLayout" stretch="0">
    <property name="leftMargin">
-    <number>0</number>
+    <number>9</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>9</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>9</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>9</number>
    </property>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="bottomMargin">
+    <layout class="QVBoxLayout" name="verticalLayout_Master" stretch="0,1">
+     <property name="spacing">
       <number>0</number>
      </property>
      <item>
@@ -38,7 +38,7 @@
        </property>
        <property name="sizeHint" stdset="0">
         <size>
-         <width>make40</width>
+         <width>40</width>
          <height>20</height>
         </size>
        </property>

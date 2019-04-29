@@ -82,7 +82,7 @@ bool CObfuScationRelay::VerifyMessage(std::string strSharedKey)
 
 void CObfuScationRelay::Relay()
 {
-    int nCount = std::min(mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()), 20);
+    int nCount = std::min(mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()), 20u);
     int nRank1 = (rand() % nCount) + 1;
     int nRank2 = (rand() % nCount) + 1;
 

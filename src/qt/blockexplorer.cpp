@@ -1,3 +1,7 @@
+// Copyright (c) 2017-2018 The PIVX developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "blockexplorer.h"
 #include "bitcoinunits.h"
 #include "chainparams.h"
@@ -44,7 +48,7 @@ static std::string ValueToString(CAmount nValue, bool AllowNegative = false)
     if (nValue < 0 && !AllowNegative)
         return "<span>" + _("unknown") + "</span>";
 
-    QString Str = BitcoinUnits::formatWithUnit(BitcoinUnits::BEETLECOIN, nValue);
+    QString Str = BitcoinUnits::formatWithUnit(BitcoinUnits::BEET, nValue);
     if (AllowNegative && nValue > 0)
         Str = '+' + Str;
     return std::string("<span>") + Str.toUtf8().data() + "</span>";
@@ -222,14 +226,15 @@ std::string BlockToString(CBlockIndex* pBlock)
     TxContent += "</table>";
 
     CAmount Generated;
-    if (pBlock->nHeight == 0)
+    int height = pBlock->nHeight;
+    if (height == 0)
         Generated = OutVolume;
     else
-        Generated = GetBlockValue(pBlock->nHeight - 1);
+        Generated = GetBlockValue(height - 1) + GetTreasuryAward(height);
 
     std::string BlockContentCells[] =
         {
-            _("Height"), itostr(pBlock->nHeight),
+            _("Height"), itostr(height),
             _("Size"), itostr(GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)),
             _("Number of Transactions"), itostr(block.vtx.size()),
             _("Value Out"), ValueToString(OutVolume),
@@ -250,13 +255,13 @@ std::string BlockToString(CBlockIndex* pBlock)
 
     std::string Content;
     Content += "<h2><a class=\"nav\" href=";
-    Content += itostr(pBlock->nHeight - 1);
+    Content += itostr(height - 1);
     Content += ">◄&nbsp;</a>";
     Content += _("Block");
     Content += " ";
-    Content += itostr(pBlock->nHeight);
+    Content += itostr(height);
     Content += "<a class=\"nav\" href=";
-    Content += itostr(pBlock->nHeight + 1);
+    Content += itostr(height + 1);
     Content += ">&nbsp;►</a></h2>";
     Content += BlockContent;
     Content += "</br>";
@@ -391,8 +396,10 @@ std::string AddressToString(const CBitcoinAddress& Address)
     /*
     CScript AddressScript;
     AddressScript.SetDestination(Address.Get());
+
     CAmount Sum = 0;
     bool fAddrIndex = false;
+
     if (!fAddrIndex)
         return ""; // it will take too long to find transactions by address
     else
@@ -432,7 +439,7 @@ BlockExplorer::BlockExplorer(QWidget* parent) : QMainWindow(parent),
     ui->setupUi(this);
 
     this->setStyleSheet(GUIUtil::loadStyleSheet());
-    
+
     connect(ui->pushSearch, SIGNAL(released()), this, SLOT(onSearch()));
     connect(ui->content, SIGNAL(linkActivated(const QString&)), this, SLOT(goTo(const QString&)));
     connect(ui->back, SIGNAL(released()), this, SLOT(back()));
@@ -470,7 +477,7 @@ void BlockExplorer::showEvent(QShowEvent*)
         m_History.push_back(text);
         updateNavButtons();
 
-        if (!GetBoolArg("-txindex", false)) {
+        if (!GetBoolArg("-txindex", true)) {
             QString Warning = tr("Not all transactions will be shown. To view all transactions you need to set txindex=1 in the configuration file (beetlecoin.conf).");
             QMessageBox::warning(this, "BeetleCoin Core Blockchain Explorer", Warning, QMessageBox::Ok);
         }
@@ -548,7 +555,7 @@ void BlockExplorer::setBlock(CBlockIndex* pBlock)
 
 void BlockExplorer::setContent(const std::string& Content)
 {
-    QString CSS = "body {font-size:12px; color:#f8f6f6; bgcolor:#F38F10;}\n a, span { font-family: monospace; }\n span.addr {color:#F38F10; font-weight: bold;}\n table tr td {padding: 3px; border: 1px solid black; background-color: #F38F10;}\n td.d0 {font-weight: bold; color:#f8f6f6;}\n h2, h3 { white-space:nowrap; color:#F38F10;}\n a { color:#FFFC00; text-decoration:none; }\n a.nav {color:#F38F10;}\n";
+    QString CSS = "body {font-size:12px; color:#f8f6f6; bgcolor:#5B4C7C;}\n a, span { font-family: monospace; }\n span.addr {color:#5B4C7C; font-weight: bold;}\n table tr td {padding: 3px; border: 1px solid black; background-color: #5B4C7C;}\n td.d0 {font-weight: bold; color:#f8f6f6;}\n h2, h3 { white-space:nowrap; color:#5B4C7C;}\n a { color:#88f6f6; text-decoration:none; }\n a.nav {color:#5B4C7C;}\n";
     QString FullContent = "<html><head><style type=\"text/css\">" + CSS + "</style></head>" + "<body>" + Content.c_str() + "</body></html>";
     // printf(FullContent.toUtf8());
 

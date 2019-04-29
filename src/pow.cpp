@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
 // Copyright (c) 2018-2019 The BeetleCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
@@ -16,9 +17,10 @@
 
 #include <math.h>
 
-unsigned int static DarkGravityWave(const CBlockIndex* pindexLast)
+
+unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* pblock)
 {
-    /* current difficulty formula, beetlecoin - DarkGravity v3, written by Evan Duffield - evan@dashpay.io */
+    /* current difficulty formula, pivx - DarkGravity v3, written by Evan Duffield - evan@dashpay.io */
     const CBlockIndex* BlockLastSolved = pindexLast;
     const CBlockIndex* BlockReading = pindexLast;
     int64_t nActualTimespan = 0;
@@ -34,9 +36,7 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast)
     }
 
     if (pindexLast->nHeight > Params().LAST_POW_BLOCK()) {
-        uint256 bnTargetLimit = (~uint256(0) >> 24);
-        int64_t nTargetSpacing = 60;
-        int64_t nTargetTimespan = 60 * 40;
+        uint256 bnTargetLimit = Params().NetworkID() == CBaseChainParams::MAIN ? ~uint256(0) >> 24 : Params().ProofOfWorkLimit();
 
         int64_t nActualSpacing = 0;
         if (pindexLast->nHeight != 0)
@@ -50,9 +50,8 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast)
         uint256 bnNew;
         bnNew.SetCompact(pindexLast->nBits);
 
-        int64_t nInterval = nTargetTimespan / nTargetSpacing;
-        bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
-        bnNew /= ((nInterval + 1) * nTargetSpacing);
+        bnNew *= ((Params().Interval() - 1) * Params().TargetSpacing() + nActualSpacing + nActualSpacing);
+        bnNew /= ((Params().Interval() + 1) * Params().TargetSpacing());
 
         if (bnNew <= 0 || bnNew > bnTargetLimit)
             bnNew = bnTargetLimit;
@@ -90,7 +89,7 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast)
 
     uint256 bnNew(PastDifficultyAverage);
 
-    int64_t _nTargetTimespan = CountBlocks * (pindexLast->nHeight > Params().LAST_POW_BLOCK() ? Params().TargetSpacing() : Params().TargetSpacingSlowLaunch());
+    int64_t _nTargetTimespan = CountBlocks * Params().TargetSpacing();
 
     if (nActualTimespan < _nTargetTimespan / 3)
         nActualTimespan = _nTargetTimespan / 3;
@@ -106,11 +105,6 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast)
     }
 
     return bnNew.GetCompact();
-}
-
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* pblock)
-{
-	return DarkGravityWave(pindexLast);
 }
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits)
@@ -129,8 +123,8 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits)
         return error("CheckProofOfWork() : nBits below minimum work");
 
     // Check proof of work matches claimed amount
-    // if (hash > bnTarget)
-    //     return error("CheckProofOfWork() : hash doesn't match nBits");
+    if (hash.GetCompact() > bnTarget)
+        return error("CheckProofOfWork() : hash doesn't match nBits");
 
     return true;
 }

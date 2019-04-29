@@ -1,5 +1,6 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2018-2019 The ProjectCoin Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1520,7 +1521,7 @@ bool CObfuscationPool::DoAutomaticDenominating(bool fDryRun)
         }
 
         //if we've used 90% of the Masternode list then drop all the oldest first
-        int nThreshold = (int)(mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) * 0.9);
+        int nThreshold = mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) / 10 * 9;
         LogPrint("obfuscation", "Checking vecMasternodesUsed size %d threshold %d\n", (int)vecMasternodesUsed.size(), nThreshold);
         while ((int)vecMasternodesUsed.size() > nThreshold) {
             vecMasternodesUsed.erase(vecMasternodesUsed.begin());
@@ -1600,7 +1601,7 @@ bool CObfuscationPool::DoAutomaticDenominating(bool fDryRun)
         // otherwise, try one randomly
         while (i < 10) {
             CMasternode* pmn = mnodeman.FindRandomNotInVec(CMasternode::LevelValue::UNSPECIFIED, vecMasternodesUsed, ActiveProtocol());
-            if (pmn == NULL) {
+            if (!pmn) {
                 LogPrintf("DoAutomaticDenominating --- Can't find random masternode!\n");
                 strAutoDenomResult = _("Can't find random Masternode.");
                 return false;
@@ -2109,12 +2110,16 @@ bool CObfuScationSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey)
 
     CTransaction txVin;
     uint256 hash;
-    if (GetTransaction(vin.prevout.hash, txVin, hash, true)) {
-        BOOST_FOREACH (CTxOut out, txVin.vout) {
-            if (out.nValue == GetMstrNodCollateral(chainActive.Height())*COIN) {
-                if (out.scriptPubKey == payee2) return true;
-            }
-        }
+    if(!GetTransaction(vin.prevout.hash, txVin, hash, true))
+        return false;
+
+    for(CTxOut out : txVin.vout) {
+
+        if(!CMasternode::IsDepositCoins(out.nValue))
+            continue;
+
+        if(out.scriptPubKey == payee2)
+            return true;
     }
 
     return false;

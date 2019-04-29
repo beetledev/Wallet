@@ -19,7 +19,7 @@ BitcoinUnits::BitcoinUnits(QObject* parent) : QAbstractListModel(parent),
 QList<BitcoinUnits::Unit> BitcoinUnits::availableUnits()
 {
     QList<BitcoinUnits::Unit> unitlist;
-    unitlist.append(BEETLECOIN);
+    unitlist.append(BEET);
     unitlist.append(mBEET);
     unitlist.append(uBEET);
     return unitlist;
@@ -28,7 +28,7 @@ QList<BitcoinUnits::Unit> BitcoinUnits::availableUnits()
 bool BitcoinUnits::valid(int unit)
 {
     switch (unit) {
-    case BEETLECOIN:
+    case BEET:
     case mBEET:
     case uBEET:
         return true;
@@ -40,7 +40,7 @@ bool BitcoinUnits::valid(int unit)
 QString BitcoinUnits::id(int unit)
 {
     switch (unit) {
-    case BEETLECOIN:
+    case BEET:
         return QString("beet");
     case mBEET:
         return QString("mbeet");
@@ -55,7 +55,7 @@ QString BitcoinUnits::name(int unit)
 {
     if (Params().NetworkID() == CBaseChainParams::MAIN) {
         switch (unit) {
-        case BEETLECOIN:
+        case BEET:
             return QString("BEET");
         case mBEET:
             return QString("mBEET");
@@ -66,7 +66,7 @@ QString BitcoinUnits::name(int unit)
         }
     } else {
         switch (unit) {
-        case BEETLECOIN:
+        case BEET:
             return QString("tBEET");
         case mBEET:
             return QString("mtBEET");
@@ -82,7 +82,7 @@ QString BitcoinUnits::description(int unit)
 {
     if (Params().NetworkID() == CBaseChainParams::MAIN) {
         switch (unit) {
-        case BEETLECOIN:
+        case BEET:
             return QString("BEETLECOIN");
         case mBEET:
             return QString("Milli-BEETLECOIN (1 / 1" THIN_SP_UTF8 "000)");
@@ -93,7 +93,7 @@ QString BitcoinUnits::description(int unit)
         }
     } else {
         switch (unit) {
-        case BEETLECOIN:
+        case BEET:
             return QString("TestBEETs");
         case mBEET:
             return QString("Milli-TestBEET (1 / 1" THIN_SP_UTF8 "000)");
@@ -108,7 +108,7 @@ QString BitcoinUnits::description(int unit)
 qint64 BitcoinUnits::factor(int unit)
 {
     switch (unit) {
-    case BEETLECOIN:
+    case BEET:
         return 100000000;
     case mBEET:
         return 100000;
@@ -122,7 +122,7 @@ qint64 BitcoinUnits::factor(int unit)
 int BitcoinUnits::decimals(int unit)
 {
     switch (unit) {
-    case BEETLECOIN:
+    case BEET:
         return 8;
     case mBEET:
         return 5;

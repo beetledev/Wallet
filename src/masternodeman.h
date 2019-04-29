@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -97,7 +97,7 @@ public:
     static CValidationState GetInputCheckingTx(const CTxIn& vin, CMutableTransaction&);
 
     /// Add an entry
-    bool Add(CMasternode& mn);
+    bool Add(const CMasternode& mn);
 
     /// Ask (source) node for mnb
     void AskForMN(CNode* pnode, CTxIn& vin);
@@ -111,21 +111,21 @@ public:
     /// Clear Masternode vector
     void Clear();
 
-    int CountEnabled(unsigned mnlevel = CMasternode::LevelValue::UNSPECIFIED, int protocolVersion = -1);
-
-    std::map<unsigned, unsigned> CountEnabledByLevels(int protocolVersion = -1);
+    unsigned CountEnabled(unsigned mnlevel = CMasternode::LevelValue::UNSPECIFIED, int protocolVersion = -1);
+    std::map<unsigned, int> CountEnabledByLevels(int protocolVersion = -1);
 
     void CountNetworks(int protocolVersion, int& ipv4, int& ipv6, int& onion);
 
-    void DsegUpdate(CNode* pnode);
+    bool DsegUpdate(CNode* pnode);
 
     /// Find an entry
     CMasternode* Find(const CScript& payee);
     CMasternode* Find(const CTxIn& vin);
     CMasternode* Find(const CPubKey& pubKeyMasternode);
+    CMasternode* Find(const CService& service);
 
     /// Find an entry in the masternode list that is next to be paid
-    CMasternode* GetNextMasternodeInQueueForPayment(int nBlockHeight, unsigned mnlevel, bool fFilterSigTime, int& nCount);
+    CMasternode* GetNextMasternodeInQueueForPayment(int nBlockHeight, unsigned mnlevel, bool fFilterSigTime, unsigned& nCount);
 
     /// Find a random entry
     CMasternode* FindRandomNotInVec(unsigned mnlevel, std::vector<CTxIn>& vecToExclude, int protocolVersion = -1);
@@ -152,7 +152,7 @@ public:
     int size(unsigned mnlevel);
 
     /// Return the number of Masternodes older than (default) 8000 seconds
-    int stable_size (unsigned mnlevel = CMasternode::LevelValue::UNSPECIFIED);
+    int stable_size(unsigned mnlevel = CMasternode::LevelValue::UNSPECIFIED);
 
     std::string ToString() const;
 

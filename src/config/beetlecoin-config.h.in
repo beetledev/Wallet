@@ -69,6 +69,10 @@
    don't. */
 #undef HAVE_DECL_BE64TOH
 
+/* Define to 1 if you have the declaration of `daemon', and to 0 if you don't.
+   */
+#undef HAVE_DECL_DAEMON
+
 /* Define to 1 if you have the declaration of `htobe32', and to 0 if you
    don't. */
 #undef HAVE_DECL_HTOBE32
@@ -167,6 +171,9 @@
 /* Define to 1 if you have the `rpcrt4' library (-lrpcrt4). */
 #undef HAVE_LIBRPCRT4
 
+/* Define to 1 if you have the `rt' library (-lrt). */
+#undef HAVE_LIBRT
+
 /* Define to 1 if you have the `shell32' library (-lshell32). */
 #undef HAVE_LIBSHELL32
 
@@ -194,6 +201,12 @@
 /* Define to 1 if you have the `z ' library (-lz ). */
 #undef HAVE_LIBZ_
 
+/* Define this symbol if you have malloc_info */
+#undef HAVE_MALLOC_INFO
+
+/* Define this symbol if you have mallopt with M_ARENA_MAX */
+#undef HAVE_MALLOPT_ARENA_MAX
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
@@ -209,6 +222,9 @@
 /* Define to 1 if you have the <miniupnpc/upnperrors.h> header file. */
 #undef HAVE_MINIUPNPC_UPNPERRORS_H
 
+/* Define this symbol if you have MSG_DONTWAIT */
+#undef HAVE_MSG_DONTWAIT
+
 /* Define this symbol if you have MSG_NOSIGNAL */
 #undef HAVE_MSG_NOSIGNAL
 
@@ -217,9 +233,6 @@
 
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
-
-/* Define to 1 to enable trading dialog */
-#undef HAVE_QT5
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -250,6 +263,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define if thread_local is supported. */
+#undef HAVE_THREAD_LOCAL
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
@@ -291,6 +307,9 @@
 /* Define this symbol if the qt platform is cocoa */
 #undef QT_QPA_PLATFORM_COCOA
 
+/* Define this symbol if the minimal qt platform exists */
+#undef QT_QPA_PLATFORM_MINIMAL
+
 /* Define this symbol if the qt platform is windows */
 #undef QT_QPA_PLATFORM_WINDOWS
 
@@ -305,6 +324,9 @@
 
 /* Define to 1 if strerror_r returns char *. */
 #undef STRERROR_R_CHAR_P
+
+/* Define this symbol if coverage is enabled */
+#undef USE_COVERAGE
 
 /* Define if dbus support should be compiled in */
 #undef USE_DBUS

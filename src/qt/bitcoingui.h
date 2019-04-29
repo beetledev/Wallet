@@ -1,4 +1,5 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
+// Copyright (c) 2017-2018 The PIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -83,7 +84,9 @@ private:
 
     UnitDisplayStatusBarControl* unitDisplayControl;
     QLabel* labelStakingIcon;
+    QPushButton* labelAutoMintIcon;
     QPushButton* labelEncryptionIcon;
+    QLabel* labelTorIcon;
     QPushButton* labelConnectionsIcon;
     QLabel* labelBlocksIcon;
     QLabel* progressBarLabel;
@@ -180,9 +183,10 @@ public slots:
     */
     void message(const QString& title, const QString& message, unsigned int style, bool* ret = NULL);
 
-    void setStakingStatus();
-
 #ifdef ENABLE_WALLET
+    void setStakingStatus();
+    void setAutoMintStatus();
+
     /** Set the encryption status as shown in the UI.
        @param[in] status            current encryption status
        @see WalletModel::EncryptionStatus
@@ -194,6 +198,10 @@ public slots:
     /** Show incoming transaction notification for new transactions. */
     void incomingTransaction(const QString& date, int unit, const CAmount& amount, const QString& type, const QString& address);
 #endif // ENABLE_WALLET
+
+private:
+    /** Set the Tor-enabled icon as shown in the UI. */
+    void updateTorIcon();
 
 private slots:
 #ifdef ENABLE_WALLET
@@ -271,7 +279,7 @@ private:
 
     /** Shows context menu with Display Unit options by the mouse coordinates */
     void onDisplayUnitsClicked(const QPoint& point);
-    /** Creates context menu, its actions, and beetlecoins up all the relevant signals for mouse events. */
+    /** Creates context menu, its actions, and wires up all the relevant signals for mouse events. */
     void createContextMenu();
 
 private slots:

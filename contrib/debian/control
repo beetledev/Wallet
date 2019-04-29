@@ -23,8 +23,8 @@ Build-Depends: debhelper,
  libprotobuf-dev, protobuf-compiler
 Standards-Version: 3.9.2
 Homepage: http://www.beetlecoin.org
-Vcs-Git: git://github.com/beetlecoinproject/BeetleCoin.git
-Vcs-Browser: http://github.com/beetlecoinproject/BeetleCoin
+Vcs-Git: git://github.com/beetledev/Wallet.git
+Vcs-Browser: http://github.com/beetledev/Wallet
 
 Package: beetlecoind
 Architecture: any
