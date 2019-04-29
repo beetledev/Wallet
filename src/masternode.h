@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -59,8 +59,9 @@ public:
         READWRITE(vchSig);
     }
 
-    bool CheckAndUpdate(int& nDos, bool fRequireEnabled = true);
+    bool CheckAndUpdate(int& nDos, bool fRequireEnabled = true, bool fCheckSigTimeOnly = false);
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
+    bool VerifySignature(CPubKey& pubKeyMasternode, int &nDos);
     void Relay();
 
     uint256 GetHash()
@@ -150,14 +151,13 @@ public:
     int nLastScanningErrorBlockHeight;
     CMasternodePing lastPing;
 
+    int64_t nLastDsee;  // temporary, do not save. Remove after migration to v12
+    int64_t nLastDseep; // temporary, do not save. Remove after migration to v12
     static unsigned Level(CAmount vin_val, int blockHeight);
     static unsigned Level(const CTxIn& vin, int blockHeight);
 
     static bool IsDepositCoins(CAmount);
     static bool IsDepositCoins(const CTxIn& vin, CAmount& vin_val);
-
-    int64_t nLastDsee;  // temporary, do not save. Remove after migration to v12
-    int64_t nLastDseep; // temporary, do not save. Remove after migration to v12
 
     CMasternode();
     CMasternode(const CMasternode& other);
@@ -263,7 +263,7 @@ public:
         lastPing = CMasternodePing();
     }
 
-    bool IsEnabled()
+    bool IsEnabled() const
     {
         return activeState == MASTERNODE_ENABLED;
     }
@@ -319,7 +319,10 @@ public:
     bool CheckAndUpdate(int& nDoS);
     bool CheckInputsAndAdd(int& nDos);
     bool Sign(CKey& keyCollateralAddress);
+    bool VerifySignature();
     void Relay();
+    std::string GetOldStrMessage();
+    std::string GetNewStrMessage();
 
     ADD_SERIALIZE_METHODS;
 
@@ -348,6 +351,7 @@ public:
     /// Create Masternode broadcast, needs to be relayed manually after that
     static bool Create(CTxIn vin, CService service, CKey keyCollateralAddressNew, CPubKey pubKeyCollateralAddressNew, CKey keyMasternodeNew, CPubKey pubKeyMasternodeNew, std::string& strErrorRet, CMasternodeBroadcast& mnbRet);
     static bool Create(std::string strService, std::string strKey, std::string strTxHash, std::string strOutputIndex, std::string& strErrorRet, CMasternodeBroadcast& mnbRet, bool fOffline = false);
+    static bool CheckDefaultPort(std::string strService, std::string& strErrorRet, std::string strContext);
 };
 
 #endif

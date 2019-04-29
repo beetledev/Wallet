@@ -47,6 +47,10 @@ const char* ScriptErrorString(const ScriptError serror)
             return "OP_RETURN was encountered";
         case SCRIPT_ERR_UNBALANCED_CONDITIONAL:
             return "Invalid OP_IF construction";
+        case SCRIPT_ERR_NEGATIVE_LOCKTIME:
+            return "Negative locktime";
+        case SCRIPT_ERR_UNSATISFIED_LOCKTIME:
+            return "Locktime requirement not satisfied";
         case SCRIPT_ERR_SIG_HASHTYPE:
             return "Signature hash type missing or not understood";
         case SCRIPT_ERR_SIG_DER:
@@ -59,10 +63,17 @@ const char* ScriptErrorString(const ScriptError serror)
             return "Non-canonical signature: S value is unnecessarily high";
         case SCRIPT_ERR_SIG_NULLDUMMY:
             return "Dummy CHECKMULTISIG argument must be zero";
+        case SCRIPT_ERR_MINIMALIF:
+            return "OP_IF/NOTIF argument must be minimal";
+        case SCRIPT_ERR_SIG_NULLFAIL:
+            return "Signature must be zero for failed CHECK(MULTI)SIG "
+                   "operation";
         case SCRIPT_ERR_DISCOURAGE_UPGRADABLE_NOPS:
             return "NOPx reserved for soft-fork upgrades";
         case SCRIPT_ERR_PUBKEYTYPE:
             return "Public key is neither compressed or uncompressed";
+        case SCRIPT_ERR_CLEANSTACK:
+            return "Script did not clean its stack";
         case SCRIPT_ERR_UNKNOWN_ERROR:
         case SCRIPT_ERR_ERROR_COUNT:
         default: break;

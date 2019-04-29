@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,6 +18,7 @@
 #include "main.h"
 #include "net.h"
 #include "txdb.h" // for -dbcache defaults
+#include "util.h"
 
 #ifdef ENABLE_WALLET
 #include "masternodeconfig.h"
@@ -61,23 +62,32 @@ void OptionsModel::Init()
 
     // Display
     if (!settings.contains("nDisplayUnit"))
-        settings.setValue("nDisplayUnit", BitcoinUnits::BEETLECOIN);
+        settings.setValue("nDisplayUnit", BitcoinUnits::BEET);
     nDisplayUnit = settings.value("nDisplayUnit").toInt();
 
     if (!settings.contains("strThirdPartyTxUrls"))
         settings.setValue("strThirdPartyTxUrls", "");
     strThirdPartyTxUrls = settings.value("strThirdPartyTxUrls", "").toString();
 
+    if (!settings.contains("fHideZeroBalances"))
+        settings.setValue("fHideZeroBalances", true);
+    fHideZeroBalances = settings.value("fHideZeroBalances").toBool();
+
     if (!settings.contains("fCoinControlFeatures"))
         settings.setValue("fCoinControlFeatures", false);
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
 
-    if (!settings.contains("nPreferredDenom"))
-        settings.setValue("nPreferredDenom", 0);
-    nPreferredDenom = settings.value("nPreferredDenom", "0").toLongLong();
+    if (!settings.contains("fZeromintEnable"))
+        settings.setValue("fZeromintEnable", true);
+    fEnableZeromint = settings.value("fZeromintEnable").toBool();
+
     if (!settings.contains("nZeromintPercentage"))
         settings.setValue("nZeromintPercentage", 10);
     nZeromintPercentage = settings.value("nZeromintPercentage").toLongLong();
+
+    if (!settings.contains("nPreferredDenom"))
+        settings.setValue("nPreferredDenom", 0);
+    nPreferredDenom = settings.value("nPreferredDenom", "0").toLongLong();
 
     if (!settings.contains("nAnonymizeBeetleCoinAmount"))
         settings.setValue("nAnonymizeBeetleCoinAmount", 1000);
@@ -113,6 +123,9 @@ void OptionsModel::Init()
     if (!SoftSetBoolArg("-spendzeroconfchange", settings.value("bSpendZeroConfChange").toBool()))
         addOverriddenOption("-spendzeroconfchange");
 #endif
+    if (!settings.contains("nStakeSplitThreshold"))
+        settings.setValue("nStakeSplitThreshold", 1);
+
 
     // Network
     if (!settings.contains("fUseUPnP"))
@@ -147,12 +160,14 @@ void OptionsModel::Init()
     if (!SoftSetArg("-lang", settings.value("language").toString().toStdString()))
         addOverriddenOption("-lang");
 
+    if (settings.contains("fZeromintEnable"))
+        SoftSetBoolArg("-enablezeromint", settings.value("fZeromintEnable").toBool());
     if (settings.contains("nZeromintPercentage"))
         SoftSetArg("-zeromintpercentage", settings.value("nZeromintPercentage").toString().toStdString());
     if (settings.contains("nPreferredDenom"))
         SoftSetArg("-preferredDenom", settings.value("nPreferredDenom").toString().toStdString());
     if (settings.contains("nAnonymizeBeetleCoinAmount"))
-        SoftSetArg("-anonymizebeetlecoinamount", settings.value("nAnonymizeBeetleCoinAmount").toString().toStdString());
+        SoftSetArg("-anonymizebeetamount", settings.value("nAnonymizeBeetleCoinAmount").toString().toStdString());
 
     language = settings.value("language").toString();
 }
@@ -214,7 +229,12 @@ QVariant OptionsModel::data(const QModelIndex& index, int role) const
         case ShowMasternodesTab:
             return settings.value("fShowMasternodesTab");
 #endif
+        case StakeSplitThreshold:
+            if (pwalletMain)
+                return QVariant((int)pwalletMain->nStakeSplitThreshold);
+            return settings.value("nStakeSplitThreshold");
         case DisplayUnit:
+
             return nDisplayUnit;
         case ThirdPartyTxUrls:
             return strThirdPartyTxUrls;
@@ -230,6 +250,10 @@ QVariant OptionsModel::data(const QModelIndex& index, int role) const
             return settings.value("nDatabaseCache");
         case ThreadsScriptVerif:
             return settings.value("nThreadsScriptVerif");
+        case HideZeroBalances:
+            return settings.value("fHideZeroBalances");
+        case ZeromintEnable:
+            return QVariant(fEnableZeromint);
         case ZeromintPercentage:
             return QVariant(nZeromintPercentage);
         case ZeromintPrefDenom:
@@ -311,6 +335,10 @@ bool OptionsModel::setData(const QModelIndex& index, const QVariant& value, int 
             }
             break;
 #endif
+        case StakeSplitThreshold:
+            settings.setValue("nStakeSplitThreshold", value.toInt());
+            setStakeSplitThreshold(value.toInt());
+            break;
         case DisplayUnit:
             setDisplayUnit(value);
             break;
@@ -339,6 +367,11 @@ bool OptionsModel::setData(const QModelIndex& index, const QVariant& value, int 
                 setRestartRequired(true);
             }
             break;
+        case ZeromintEnable:
+            fEnableZeromint = value.toBool();
+            settings.setValue("fZeromintEnable", fEnableZeromint);
+            emit zeromintEnableChanged(fEnableZeromint);
+            break;
         case ZeromintPercentage:
             nZeromintPercentage = value.toInt();
             settings.setValue("nZeromintPercentage", nZeromintPercentage);
@@ -348,6 +381,11 @@ bool OptionsModel::setData(const QModelIndex& index, const QVariant& value, int 
             nPreferredDenom = value.toInt();
             settings.setValue("nPreferredDenom", nPreferredDenom);
             emit preferredDenomChanged(nPreferredDenom);
+            break;
+        case HideZeroBalances:
+            fHideZeroBalances = value.toBool();
+            settings.setValue("fHideZeroBalances", fHideZeroBalances);
+            emit hideZeroBalancesChanged(fHideZeroBalances);
             break;
 
         case AnonymizeBeetleCoinAmount:
@@ -398,6 +436,25 @@ void OptionsModel::setDisplayUnit(const QVariant& value)
         emit displayUnitChanged(nDisplayUnit);
     }
 }
+
+/* Update StakeSplitThreshold's value in wallet */
+void OptionsModel::setStakeSplitThreshold(int value)
+{
+    // XXX: maybe it's worth to wrap related stuff with WALLET_ENABLE ?
+    uint64_t nStakeSplitThreshold;
+
+    nStakeSplitThreshold = value;
+    if (pwalletMain && pwalletMain->nStakeSplitThreshold != nStakeSplitThreshold) {
+        CWalletDB walletdb(pwalletMain->strWalletFile);
+        LOCK(pwalletMain->cs_wallet);
+        {
+            pwalletMain->nStakeSplitThreshold = nStakeSplitThreshold;
+            if (pwalletMain->fFileBacked)
+                walletdb.WriteStakeSplitThreshold(nStakeSplitThreshold);
+        }
+    }
+}
+
 
 bool OptionsModel::getProxySettings(QNetworkProxy& proxy) const
 {
