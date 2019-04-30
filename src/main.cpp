@@ -4221,7 +4221,7 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBloc
     CBlockIndex* pindexPrev = NULL;
     if (hash != Params().HashGenesisBlock()) {
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
-        if (mi == mapBlockIndex.end())
+        if (mi == mapBlockIndex.end() || !((*mi).second->nStatus & BLOCK_HAVE_DATA))
             return state.DoS(0, error("%s : prev block %s not found", __func__, block.hashPrevBlock.ToString().c_str()), 0, "bad-prevblk");
         pindexPrev = (*mi).second;
         if (pindexPrev->nStatus & BLOCK_FAILED_MASK) {
@@ -4288,7 +4288,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
     CBlockIndex* pindexPrev = NULL;
     if (block.GetHash() != Params().HashGenesisBlock()) {
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
-        if (mi == mapBlockIndex.end())
+        if (mi == mapBlockIndex.end() || !((*mi).second->nStatus & BLOCK_HAVE_DATA))
             return state.DoS(0, error("%s : prev block %s not found", __func__, block.hashPrevBlock.ToString().c_str()), 0, "bad-prevblk");
         pindexPrev = (*mi).second;
         if (pindexPrev->nStatus & BLOCK_FAILED_MASK) {
@@ -4472,7 +4472,7 @@ bool ProcessNewBlock(CValidationState& state, CNode* pfrom, CBlock* pblock, CDis
     if (pblock->GetHash() != Params().HashGenesisBlock() && pfrom != NULL) {
         //if we get this far, check if the prev block is our prev block, if not then request sync and return false
         BlockMap::iterator mi = mapBlockIndex.find(pblock->hashPrevBlock);
-        if (mi == mapBlockIndex.end()) {
+        if (mi == mapBlockIndex.end() || !((*mi).second->nStatus & BLOCK_HAVE_DATA)) {
             pfrom->PushMessage("getblocks", chainActive.GetLocator(), uint256(0));
             return false;
         }
@@ -6113,7 +6113,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         LogPrint("net", "received block %s peer=%d\n", inv.hash.ToString(), pfrom->id);
 
         //sometimes we will be sent their most recent block and its not the one we want, in that case tell where we are
-        if (!mapBlockIndex.count(block.hashPrevBlock)) {
+        if (!mapBlockIndex.count(block.hashPrevBlock) || !(mapBlockIndex.at(block.hashPrevBlock)->nStatus & BLOCK_HAVE_DATA)) {
             if (find(pfrom->vBlockRequested.begin(), pfrom->vBlockRequested.end(), hashBlock) != pfrom->vBlockRequested.end()) {
                 //we already asked for this block, so lets work backwards and ask for the previous block
                 pfrom->PushMessage("getblocks", chainActive.GetLocator(), block.hashPrevBlock);
@@ -6127,7 +6127,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             pfrom->AddInventoryKnown(inv);
 
             CValidationState state;
-            if (!mapBlockIndex.count(block.GetHash())) {
+            if (!mapBlockIndex.count(hashBlock) || !(mapBlockIndex.at(hashBlock)->nStatus & BLOCK_HAVE_DATA)) {
                 ProcessNewBlock(state, pfrom, &block);
                 int nDoS;
                 if(state.IsInvalid(nDoS)) {

@@ -32,6 +32,7 @@ BOOST_AUTO_TEST_CASE(subsidy_limit_test)
         /* PoW Phase Two */
         CAmount nSubsidy = GetBlockValue(nHeight);
         BOOST_CHECK(nSubsidy <= 5 * COIN);
+        BOOST_CHECK(MoneyRange(nSubsidy));
         nSum += nSubsidy;
     }
 }

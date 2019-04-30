@@ -1,3 +1,8 @@
+*.sublime-project
+*.sublime-workspace
+todo.txt
+reset-files.bash
+
 *.tar.gz
 
 *.exe
@@ -5,9 +10,7 @@ src/beetlecoin
 src/beetlecoind
 src/beetlecoin-cli
 src/beetlecoin-tx
-src/beetlecoin-wallet
 src/test/test_beetlecoin
-src/test/test_beetlecoin_fuzzy
 src/qt/test/test_beetlecoin-qt
 
 # autoreconf
@@ -30,24 +33,22 @@ build-aux/test-driver
 config.log
 config.status
 configure
+confdefs.h
+conftest.cpp
+conftest.err
 libtool
 src/config/beetlecoin-config.h
 src/config/beetlecoin-config.h.in
 src/config/stamp-h1
 share/setup.nsi
 share/qt/Info.plist
+contrib/devtools/split-debug.sh
 
 src/qt/*.moc
 src/qt/moc_*.cpp
 src/qt/forms/ui_*.h
 
 src/qt/test/moc*.cpp
-
-src/qt/beetlecoin-qt.config
-src/qt/beetlecoin-qt.creator
-src/qt/beetlecoin-qt.creator.user
-src/qt/beetlecoin-qt.files
-src/qt/beetlecoin-qt.includes
 
 .deps
 .dirstamp
@@ -61,6 +62,7 @@ src/qt/beetlecoin-qt.includes
 *.o
 *.o-*
 *.patch
+.beetlecoin
 *.a
 *.pb.cc
 *.pb.h
@@ -69,6 +71,7 @@ src/qt/beetlecoin-qt.includes
 *.trs
 *.dmg
 
+src/test/data/*.json.h
 *.raw.h
 
 #libtool object files
@@ -80,14 +83,17 @@ src/qt/beetlecoin-qt.includes
 Makefile
 beetlecoin-qt
 Beetlecoin-Qt.app
-background.tiff*
 
 # Unit-tests
 Makefile.test
 beetlecoin-qt_test
+src/test/buildenv.py
 
 # Resources cpp
 qrc_*.cpp
+
+# Qt creator
+*.pro.user
 
 # Mac specific
 .DS_Store
@@ -95,7 +101,6 @@ build
 
 #lcov
 *.gcno
-*.gcda
 /*.info
 test_beetlecoin.coverage/
 total.coverage/
@@ -105,21 +110,18 @@ coverage_percent.txt
 linux-coverage-build
 linux-build
 win32-build
-test/config.ini
-test/cache/*
+qa/pull-tester/run-bitcoind-for-test.sh
+qa/pull-tester/tests-config.sh
+qa/pull-tester/cache/*
+qa/pull-tester/test.*/*
 
 !src/leveldb*/Makefile
 
+.cproject
+.project
 /doc/doxygen/
+/nbproject/
 
-libbitcoinconsensus.pc
-contrib/devtools/split-debug.sh
-
-# Output from running db4 installation
-db4
-
-#misc 
-src/leveldb/build_config.mk
-qa/pull-tester/run-bitcoind-for-test.sh
-qa/pull-tester/tests-config.sh
-src/test/buildenv.py
+.idea
+CMakeLists.txt
+cmake-build-debug
