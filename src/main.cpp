@@ -1960,7 +1960,7 @@ int64_t GetMasternodePayment(int nHeight, unsigned mnlevel, int64_t blockValue)
     if (nHeight >= GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT)) //Params().TreasuryStartBlock()
         blockValue = blockValue * 10 / 9; // add back treasury percentage to get original block value
 
-    if (nHeight < GetSporkValue(SPORK_18_NEW_MASTERNODE_TIERS_DEFAULT)) { //Params().NewMNTiersHeight()
+    if (nHeight < GetSporkValue(SPORK_18_NEW_MASTERNODE_TIERS)) { //Params().NewMNTiersHeight()
         switch(mnlevel) {
             case 1: ret = blockValue * 0;
             case 2: ret = blockValue * 0;
