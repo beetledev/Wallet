@@ -128,7 +128,7 @@ public:
         nMinerThreads = 0;
         nTargetTimespan = 40 * 60; // BeetleCoin: 40 minutes
         nTargetSpacing = 1 * 60; // BeetleCoin: 1 minute
-        nMaturity = 15;
+        nMaturity = 10;
         nMasternodeCountDrift = 20;
         nFirstSupplyReduction = 400000000 * COIN;
         nSecondSupplyReduction = 450000000 * COIN;

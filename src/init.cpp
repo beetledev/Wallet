@@ -1497,7 +1497,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 fVerifyingBlocks = true;
 
                 // Zerocoin must check at level 4
-                if (!CVerifyDB().VerifyDB(pcoinsdbview, 2, GetArg("-checkblocks", 100))) {
+                if (!CVerifyDB().VerifyDB(pcoinsdbview, 4, GetArg("-checkblocks", 100))) {
                     strLoadError = _("Corrupted block database detected");
                     fVerifyingBlocks = false;
                     break;
