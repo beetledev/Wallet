@@ -2106,7 +2106,7 @@ bool CWallet::SelectStakeCoins(std::list<std::unique_ptr<CStakeInput> >& listInp
                 continue;
 
             //check that it is matured
-            if (out.nDepth < (out.tx->IsCoinStake() ? Params().COINBASE_MATURITY() : 10))
+            if (out.nDepth < Params().COINBASE_MATURITY())
                 continue;
 
             //add to our stake set

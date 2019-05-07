@@ -1461,7 +1461,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
 
         // Check for non-standard pay-to-script-hash in inputs
         if (Params().RequireStandard() && !AreInputsStandard(tx, view))
-            return error("AcceptToMemoryPool: : nonstandard transaction input");
+            return error("AcceptToMemoryPool : nonstandard transaction input");
 
         // Check that the transaction doesn't have an excessive number of
         // sigops, making it impossible to mine. Since the coinbase transaction
@@ -1532,14 +1532,14 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
         }
 
         if (fRejectInsaneFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
-            return error("AcceptToMemoryPool: : insane fees %s, %d > %d",
+            return error("AcceptToMemoryPool : insane fees %s, %d > %d",
                 hash.ToString(),
                 nFees, ::minRelayTxFee.GetFee(nSize) * 10000);
 
         // Check against previous transactions
         // This is done last to help prevent CPU exhaustion denial-of-service attacks.
         if (!CheckInputs(tx, state, view, true, STANDARD_SCRIPT_VERIFY_FLAGS, true)) {
-            return error("AcceptToMemoryPool: : ConnectInputs failed %s", hash.ToString());
+            return error("AcceptToMemoryPool : ConnectInputs failed %s", hash.ToString());
         }
 
         // Check again against just the consensus-critical mandatory script
@@ -1552,7 +1552,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
         // invalid blocks, however allowing such transactions into the mempool
         // can be exploited as a DoS attack.
         if (!CheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true)) {
-            return error("AcceptToMemoryPool: : BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s", hash.ToString());
+            return error("AcceptToMemoryPool : BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s", hash.ToString());
         }
 
         // Store transaction in memory
@@ -1576,11 +1576,11 @@ bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransact
 
 
     if (!CheckTransaction(tx, chainActive.Height() >= Params().Zerocoin_StartHeight(), true, state))
-        return error("AcceptableInputs: : CheckTransaction failed");
+        return error("AcceptableInputs : CheckTransaction failed");
 
     // Coinbase is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase())
-        return state.DoS(100, error("AcceptableInputs: : coinbase as individual tx"),
+        return state.DoS(100, error("AcceptableInputs : coinbase as individual tx"),
             REJECT_INVALID, "coinbase");
 
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
@@ -1669,7 +1669,7 @@ bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransact
         // Check for non-standard pay-to-script-hash in inputs
         // for any real tx this will be checked on AcceptToMemoryPool anyway
         //        if (Params().RequireStandard() && !AreInputsStandard(tx, view))
-        //            return error("AcceptableInputs: : nonstandard transaction input");
+        //            return error("AcceptableInputs : nonstandard transaction input");
 
         // Check that the transaction doesn't have an excessive number of
         // sigops, making it impossible to mine. Since the coinbase transaction
@@ -1733,14 +1733,14 @@ bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransact
         }
 
         if (fRejectInsaneFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
-            return error("AcceptableInputs: : insane fees %s, %d > %d",
+            return error("AcceptableInputs : insane fees %s, %d > %d",
                 hash.ToString(),
                 nFees, ::minRelayTxFee.GetFee(nSize) * 10000);
 
         // Check against previous transactions
         // This is done last to help prevent CPU exhaustion denial-of-service attacks.
         if (!CheckInputs(tx, state, view, false, STANDARD_SCRIPT_VERIFY_FLAGS, true)) {
-            return error("AcceptableInputs: : ConnectInputs failed %s", hash.ToString());
+            return error("AcceptableInputs : ConnectInputs failed %s", hash.ToString());
         }
 
         // Check again against just the consensus-critical mandatory script
@@ -1755,7 +1755,7 @@ bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransact
         // for any real tx this will be checked on AcceptToMemoryPool anyway
         //        if (!CheckInputs(tx, state, view, false, MANDATORY_SCRIPT_VERIFY_FLAGS, true))
         //        {
-        //            return error("AcceptableInputs: : BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s", hash.ToString());
+        //            return error("AcceptableInputs : BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s", hash.ToString());
         //        }
 
         // Store transaction in memory
