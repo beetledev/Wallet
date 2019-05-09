@@ -148,7 +148,7 @@ public:
         nBlockZerocoinV2 = nModifierUpdateBlock; //!> The block that zerocoin v2 becomes active - roughly Tuesday, May 8, 2018 4:00:00 AM GMT
         nEnforceNewSporkKey = 1525158000; //!> Sporks signed after (GMT): Tuesday, May 1, 2018 7:00:00 AM GMT must use the new spork key
         nRejectOldSporkKey = 1527811200; //!> Fully reject old spork key after (GMT): Friday, June 1, 2018 12:00:00 AM
-        vTreasuryRewardAddress="XRA5ZEPxM4KK1V9FHXJGFUJjy5ABcVAdpm";
+        vTreasuryRewardAddress="XaU63hVi3dPzCcgXMzbFWbqmSCvzcysgnC";
         nStartTreasuryBlock = 315000; // Does nothing until replacing GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT) with Params().TreasuryStartBlock()
         nTreasuryBlockStep = 1 * 24 * 60 * 60 / nTargetSpacing; // Once per day
         nMasternodeTiersStartHeight = nStartTreasuryBlock; // Does nothing until replacing GetSporkValue(SPORK_18_NEW_MASTERNODE_TIERS_DEFAULT) with Params().NewMNTiersHeight()
