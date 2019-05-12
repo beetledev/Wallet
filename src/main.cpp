@@ -1920,7 +1920,7 @@ int64_t GetBlockValue(int nHeight)
     nHeight++; // one more than chainActive.Height()
     if (nHeight <= 0) return 0;
     if (Params().NetworkID() != CBaseChainParams::MAIN)
-        return nHeight-1 >= GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT) ? 90 * COIN : 100 * COIN; //Params().TreasuryStartBlock()
+        return nHeight >= Params().TreasuryStartBlock() ? 90 * COIN : 100 * COIN;
     //LogPrintf("GetBlockValue(): INFO : Block reward=%s chainActive height=%s supply=%s chainActive supply=%s\n", nHeight, chainActive.Height(), chainActive[nHeight-1]->nMoneySupply/COIN, chainActive.Tip()->nMoneySupply/COIN);
 
     int64_t nSubsidy = 0;
@@ -1947,7 +1947,7 @@ int64_t GetBlockValue(int nHeight)
         }
     }
 
-    if (nHeight-1 >= GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT)) //Params().TreasuryStartBlock()
+    if (nHeight >= Params().TreasuryStartBlock())
         nSubsidy = nSubsidy * 9 / 10; // remove 10% for treasury (90/100 goes to stakers and MNs)
 
     return nSubsidy;
@@ -1955,12 +1955,13 @@ int64_t GetBlockValue(int nHeight)
 
 int64_t GetMasternodePayment(int nHeight, unsigned mnlevel, int64_t blockValue)
 {
+    nHeight++;
     int64_t ret = 0;
 
-    if (nHeight >= GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT)) //Params().TreasuryStartBlock()
+    if (nHeight >= Params().TreasuryStartBlock())
         blockValue = blockValue * 10 / 9; // add back treasury percentage to get original block value
 
-    if (nHeight < GetSporkValue(SPORK_18_NEW_MASTERNODE_TIERS)) { //Params().NewMNTiersHeight()
+    if (nHeight < Params().NewMNTiersHeight()) {
         switch(mnlevel) {
             case 1: ret = blockValue * 0;
             case 2: ret = blockValue * 0;
@@ -1979,9 +1980,9 @@ int64_t GetMasternodePayment(int nHeight, unsigned mnlevel, int64_t blockValue)
 
 bool IsTreasuryBlock(int nHeight)
 {
-    if (nHeight <= GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT)) { //Params().TreasuryStartBlock() the block reward is reduced after TreasuryStartBlock to later be put into a payment
+    if (nHeight <= Params().TreasuryStartBlock()) { // the block reward is reduced after TreasuryStartBlock to later be put into a payment
         return false;
-    } else if ((nHeight-GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT)) % Params().TreasuryBlockStep() == 0) { //Params().TreasuryStartBlock()
+    } else if ((nHeight-Params().TreasuryStartBlock()) % Params().TreasuryBlockStep() == 0) {
         return true;
     } else {
         return false;
@@ -4147,8 +4148,8 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     if (pcheckpoint && nHeight < pcheckpoint->nHeight)
         return state.DoS(0, error("%s : forked chain older than last checkpoint (height %d)", __func__, nHeight));
 
-    // Reject block.nVersion=3 blocks when 70% of the network has upgraded:
-    if (block.nVersion < 4 && CBlockIndex::IsSuperMajority(4, pindexPrev, Params().RejectBlockOutdatedMajority())) {
+    // Reject block.nVersion=3 blocks when past the fork height
+    if (block.nVersion < 4 && nHeight >= Params().ModifierUpgradeBlock() && Params().NetworkID() == CBaseChainParams::MAIN) {
         return state.Invalid(error("%s : rejected nVersion=%d block", __func__, block.nVersion),
             REJECT_OBSOLETE, "bad-version");
     }
@@ -4194,7 +4195,7 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIn
 
     // Enforce block.nVersion=2 rule that the coinbase starts with serialized block height
     // if 750 of the last 1,000 blocks are version 2 or greater (51/100 if testnet):
-    if ((block.nVersion >= 4 && CBlockIndex::IsSuperMajority(4, pindexPrev, Params().EnforceBlockUpgradeMajority())) || (Params().NetworkID() != CBaseChainParams::MAIN && block.GetHash() != Params().HashGenesisBlock())) {
+    if (block.GetHash() != Params().HashGenesisBlock() && (nHeight >= Params().ModifierUpgradeBlock() || Params().NetworkID() != CBaseChainParams::MAIN)) {
         CScript expect = CScript() << nHeight;
         if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin())) {
@@ -5534,10 +5535,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             return false;
 
         // Disconnect from outdated peers
-        if (pfrom->nVersion < 70101 && (CBlockIndex::IsSuperMajority(4, chainActive.Tip(), Params().RejectBlockOutdatedMajority()) || Params().NetworkID() != CBaseChainParams::MAIN)) {
+        if (pfrom->nVersion < 70102 && (chainActive.Height() + 1 >= Params().ModifierUpgradeBlock() || Params().NetworkID() != CBaseChainParams::MAIN)) {
             LogPrintf("peer=%d using obsolete version %i; disconnecting\n", pfrom->id, pfrom->nVersion);
             pfrom->PushMessage("reject", strCommand, REJECT_OBSOLETE,
-                               strprintf("Version must be %d or greater", 70101));
+                               strprintf("Version must be %d or greater", 70102));
             pfrom->fDisconnect = true;
             return false;
         }

@@ -110,12 +110,10 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet* pwallet, 
 
     // Make sure to create the correct block version after zerocoin is enabled
     bool fZerocoinActive = chainActive.Height() + 1 >= Params().Zerocoin_StartHeight();
-    if (!fZerocoinActive)
-        pblock->nVersion = Params().Zerocoin_HeaderVersion()-1;
-    else if (!CBlockIndex::IsSuperMajority(4, chainActive.Tip(), Params().RejectBlockOutdatedMajority()) && Params().NetworkID() == CBaseChainParams::MAIN)
-        pblock->nVersion = 4;
-    else
+    if (fZerocoinActive)
         pblock->nVersion = std::max(Params().Zerocoin_HeaderVersion(), CBlock::CURRENT_VERSION);
+    else
+        pblock->nVersion = Params().Zerocoin_HeaderVersion()-1;
 
     // -regtest only: allow overriding block.nVersion with
     // -blockversion=N to test forking scenarios
@@ -593,9 +591,9 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
                 fMintableCoins = pwallet->MintableCoins();
             }
 
-            if (chainActive.Tip()->nHeight < Params().LAST_POW_BLOCK()) {
+            if (chainActive.Height() < Params().LAST_POW_BLOCK() || (chainActive.Height() + 1 < Params().ModifierUpgradeBlock() && Params().NetworkID() == CBaseChainParams::MAIN)) {
                 MilliSleep(5000);
-                continue;
+                continue; // Do not stake until the upgrade block
             }
 
             while (vNodes.empty() || pwallet->IsLocked() || !fMintableCoins || (pwallet->GetBalance() > 0 && nReserveBalance >= pwallet->GetBalance()) || !masternodeSync.IsSynced()) {
