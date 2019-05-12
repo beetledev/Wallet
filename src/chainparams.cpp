@@ -58,11 +58,12 @@ static Checkpoints::MapCheckpoints mapCheckpoints =
     boost::assign::map_list_of
     (0, uint256("00000c9d6ee5917dcd9e9d291f4b2283fce7d6b8525a653267bae3a1c5fbdd00"))
     (196750, uint256("92978c520c2a3f78f01ad1e8a2b3da382e35f51d5eb68e654b3626c9257f4de9"))
-    (320320, uint256("3ce055b2728aec7bd788c61e43c6320ec3b361b13e6d44c4e2bc619c558c597a"));
+    (320320, uint256("3ce055b2728aec7bd788c61e43c6320ec3b361b13e6d44c4e2bc619c558c597a"))
+    (339800, uint256("4105f23e74afabea348838ac8740a500e5754703321ddd19de9036c3f32d3ce2"));
 static const Checkpoints::CCheckpointData data = {
     &mapCheckpoints,
-    1556288727, // * UNIX timestamp of last checkpoint block
-    684786,     // * total number of transactions between genesis and last checkpoint
+    1557466967, // * UNIX timestamp of last checkpoint block
+    730197,     // * total number of transactions between genesis and last checkpoint
                 //   (the tx=... number in the SetBestChain debug.log lines)
     3000        // * estimated number of transactions per day after checkpoint
 };
@@ -136,22 +137,22 @@ public:
 
         /** Height or Time Based Activations **/
         nLastPOWBlock = 200;
-        nModifierUpdateBlock = 400000;
+        nModifierUpdateBlock = 345000;
         nZerocoinStartHeight = 12000;
         //nZerocoinStartTime = 1508214600; // October 17, 2017 4:30:00 AM
         nBlockEnforceSerialRange = -1; //Enforce serial range starting this block
-        nBlockRecalculateAccumulators = 390000; //Trigger a recalculation of accumulators
+        nBlockRecalculateAccumulators = nModifierUpdateBlock + 10; //Trigger a recalculation of accumulators
         nBlockFirstFraudulent = nZerocoinStartHeight; //First block that bad serials emerged
         nBlockLastGoodCheckpoint = nZerocoinStartHeight; //Last valid accumulator checkpoint
         nBlockEnforceInvalidUTXO = -1; //Start enforcing the invalid UTXO's
         nInvalidAmountFiltered = 0*COIN; //Amount of invalid coins filtered through exchanges, that should be considered valid
-        nBlockZerocoinV2 = nModifierUpdateBlock; //!> The block that zerocoin v2 becomes active - roughly Tuesday, May 8, 2018 4:00:00 AM GMT
+        nBlockZerocoinV2 = nBlockRecalculateAccumulators + 10; //!> The block that zerocoin v2 becomes active - roughly Tuesday, May 8, 2018 4:00:00 AM GMT
         nEnforceNewSporkKey = 1525158000; //!> Sporks signed after (GMT): Tuesday, May 1, 2018 7:00:00 AM GMT must use the new spork key
         nRejectOldSporkKey = 1527811200; //!> Fully reject old spork key after (GMT): Friday, June 1, 2018 12:00:00 AM
         vTreasuryRewardAddress="XaU63hVi3dPzCcgXMzbFWbqmSCvzcysgnC";
-        nStartTreasuryBlock = 315000; // Does nothing until replacing GetSporkValue(SPORK_17_TREASURY_PAYMENT_ENFORCEMENT) with Params().TreasuryStartBlock()
+        nStartTreasuryBlock = nModifierUpdateBlock;
         nTreasuryBlockStep = 1 * 24 * 60 * 60 / nTargetSpacing; // Once per day
-        nMasternodeTiersStartHeight = nStartTreasuryBlock; // Does nothing until replacing GetSporkValue(SPORK_18_NEW_MASTERNODE_TIERS_DEFAULT) with Params().NewMNTiersHeight()
+        nMasternodeTiersStartHeight = nStartTreasuryBlock;
 
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot

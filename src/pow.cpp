@@ -53,6 +53,14 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         bnNew *= ((Params().Interval() - 1) * Params().TargetSpacing() + nActualSpacing + nActualSpacing);
         bnNew /= ((Params().Interval() + 1) * Params().TargetSpacing());
 
+        if (Params().NetworkID() == CBaseChainParams::MAIN)
+        {
+            int height = pindexLast->nHeight + 1;
+
+            if (height < (Params().ModifierUpgradeBlock()+10) && height >= Params().ModifierUpgradeBlock())
+                bnNew *= (int)pow(4.0, 10.0+Params().ModifierUpgradeBlock()-height); // slash difficulty and gradually ramp back up over 10 blocks
+        }
+
         if (bnNew <= 0 || bnNew > bnTargetLimit)
             bnNew = bnTargetLimit;
 

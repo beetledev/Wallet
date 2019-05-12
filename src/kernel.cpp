@@ -303,6 +303,9 @@ bool Stake(CStakeInput* stakeInput, unsigned int nBits, unsigned int nTimeBlockF
         return error("CheckStakeKernelHash() : min age violation - nTimeBlockFrom=%d nStakeMinAge=%d nTimeTx=%d",
                      nTimeBlockFrom, nStakeMinAge, nTimeTx);
 
+    if (CBlockHeader::CURRENT_VERSION == 4 && chainActive.Height() + 1 < Params().ModifierUpgradeBlock() && Params().NetworkID() == CBaseChainParams::MAIN)
+        return error("CheckStakeKernelHash() : INFO: staking on new wallet disabled until block %d", Params().ModifierUpgradeBlock()); // Do not stake until the upgrade block
+
     //grab difficulty
     uint256 bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
