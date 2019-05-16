@@ -1963,19 +1963,19 @@ int64_t GetMasternodePayment(int nHeight, unsigned mnlevel, int64_t blockValue)
 
     if (nHeight < Params().NewMNTiersHeight()) {
         switch(mnlevel) {
-            case 1: ret = blockValue * 0;
-            case 2: ret = blockValue * 0;
-            case 3: ret = blockValue * 0.85;
+            case 1: return = blockValue * 0;
+            case 2: return = blockValue * 0;
+            case 3: return = blockValue * 0.85;
         }
     } else {
         switch(mnlevel) {
-            case 1: ret = blockValue * 0.04;
-            case 2: ret = blockValue * 0.19;
-            case 3: ret = blockValue * 0.62;
+            case 1: return = blockValue * 0.04;
+            case 2: return = blockValue * 0.19;
+            case 3: return = blockValue * 0.62;
         }
     }
 
-    return ret;
+    return 0;
 }
 
 bool IsTreasuryBlock(int nHeight)
