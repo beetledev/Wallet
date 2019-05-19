@@ -538,15 +538,15 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
 
 bool CMasternodeBroadcast::CheckDefaultPort(std::string strService, std::string& strErrorRet, std::string strContext)
 {
-    CService service = CService(strService);
-    int nDefaultPort = Params().GetDefaultPort();
-
-    if (service.GetPort() != nDefaultPort) {
-        strErrorRet = strprintf("Invalid port %u for masternode %s, only %d is supported on %s-net.",
-                                        service.GetPort(), strService, nDefaultPort, Params().NetworkIDString());
-        LogPrint("masternode", "%s - %s\n", strContext, strErrorRet);
-        return false;
-    }
+    //CService service = CService(strService);
+    //int nDefaultPort = Params().GetDefaultPort();
+    //
+    //if (service.GetPort() != nDefaultPort) {
+    //    strErrorRet = strprintf("Invalid port %u for masternode %s, only %d is supported on %s-net.",
+    //                                    service.GetPort(), strService, nDefaultPort, Params().NetworkIDString());
+    //    LogPrint("masternode", "%s - %s\n", strContext, strErrorRet);
+    //    return false;
+    //}
 
     return true;
 }
