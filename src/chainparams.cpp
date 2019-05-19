@@ -136,12 +136,12 @@ public:
         nMaxMoneyOut = 500000000 * COIN;
 
         /** Height or Time Based Activations **/
-        nLastPOWBlock = 2000;
+        nLastPOWBlock = 200;
         nModifierUpdateBlock = 345000;
         nZerocoinStartHeight = 12000;
         //nZerocoinStartTime = 1508214600; // October 17, 2017 4:30:00 AM
         nBlockEnforceSerialRange = -1; //Enforce serial range starting this block
-        nBlockRecalculateAccumulators = nZerocoinStartHeight + 10; //Trigger a recalculation of accumulators
+        nBlockRecalculateAccumulators = nModifierUpdateBlock + 10; //Trigger a recalculation of accumulators
         nBlockFirstFraudulent = nZerocoinStartHeight; //First block that bad serials emerged
         nBlockLastGoodCheckpoint = nZerocoinStartHeight; //Last valid accumulator checkpoint
         nBlockEnforceInvalidUTXO = -1; //Start enforcing the invalid UTXO's
