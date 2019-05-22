@@ -74,13 +74,14 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         } else {
             //Masternode reward
             CTxDestination destMN;
-            int nIndexMN = wtx.vout.size() - 1;
-            if (ExtractDestination(wtx.vout[nIndexMN].scriptPubKey, destMN) && IsMine(*wallet, destMN)) {
-                isminetype mine = wallet->IsMine(wtx.vout[nIndexMN]);
-                sub.involvesWatchAddress = mine & ISMINE_WATCH_ONLY;
-                sub.type = TransactionRecord::MNReward;
-                sub.address = CBitcoinAddress(destMN).ToString();
-                sub.credit = wtx.vout[nIndexMN].nValue;
+            for (int nIndexMN = wtx.vout.size() - 1; nIndexMN > 1; nIndexMN--) {
+                if (ExtractDestination(wtx.vout[nIndexMN].scriptPubKey, destMN) && IsMine(*wallet, destMN)) {
+                    isminetype mine = wallet->IsMine(wtx.vout[nIndexMN]);
+                    sub.involvesWatchAddress = mine & ISMINE_WATCH_ONLY;
+                    sub.type = TransactionRecord::MNReward;
+                    sub.address = CBitcoinAddress(destMN).ToString();
+                    sub.credit = wtx.vout[nIndexMN].nValue;
+                }
             }
         }
 
@@ -88,7 +89,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
     } else if (wtx.IsZerocoinSpend()) {
         //zerocoin spend outputs
         bool fFeeAssigned = false;
-        for (const CTxOut txout : wtx.vout) {
+        for (const CTxOut& txout : wtx.vout) {
             // change that was reminted as zerocoins
             if (txout.IsZerocoinMint()) {
                 // do not display record if this isn't from our wallet
@@ -152,7 +153,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         //
         // Credit
         //
-        BOOST_FOREACH (const CTxOut& txout, wtx.vout) {
+        for (const CTxOut& txout : wtx.vout) {
             isminetype mine = wallet->IsMine(txout);
             if (mine) {
                 TransactionRecord sub(hash, nTime);
@@ -182,7 +183,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         int nFromMe = 0;
         bool involvesWatchAddress = false;
         isminetype fAllFromMe = ISMINE_SPENDABLE;
-        BOOST_FOREACH (const CTxIn& txin, wtx.vin) {
+        for (const CTxIn& txin : wtx.vin) {
             if (wallet->IsMine(txin)) {
                 fAllFromMeDenom = fAllFromMeDenom && wallet->IsDenominated(txin);
                 nFromMe++;
@@ -195,7 +196,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         isminetype fAllToMe = ISMINE_SPENDABLE;
         bool fAllToMeDenom = true;
         int nToMe = 0;
-        BOOST_FOREACH (const CTxOut& txout, wtx.vout) {
+        for (const CTxOut& txout : wtx.vout) {
             if (wallet->IsMine(txout)) {
                 fAllToMeDenom = fAllToMeDenom && wallet->IsDenominatedAmount(txout.nValue);
                 nToMe++;

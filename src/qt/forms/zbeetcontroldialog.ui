@@ -6,13 +6,13 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>681</width>
+    <width>781</width>
     <height>450</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>681</width>
+    <width>781</width>
     <height>450</height>
    </size>
   </property>
@@ -118,7 +118,7 @@
     </layout>
    </item>
    <item row="1" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <widget class="QTreeWidget" name="treeWidget">
       <property name="sizePolicy">

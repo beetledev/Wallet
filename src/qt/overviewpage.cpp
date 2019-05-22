@@ -59,17 +59,6 @@ public:
         qint64 amount = index.data(TransactionTableModel::AmountRole).toLongLong();
         bool confirmed = index.data(TransactionTableModel::ConfirmedRole).toBool();
 
-        // Check transaction status
-        int nStatus = index.data(TransactionTableModel::StatusRole).toInt();
-        bool fConflicted = false;
-        if (nStatus == TransactionStatus::Conflicted || nStatus == TransactionStatus::NotAccepted) {
-            fConflicted = true; // Most probably orphaned, but could have other reasons as well
-        }
-        bool fImmature = false;
-        if (nStatus == TransactionStatus::Immature) {
-            fImmature = true;
-        }
-
         QVariant value = index.data(Qt::ForegroundRole);
         QColor foreground = COLOR_BLACK;
         if (value.canConvert<QBrush>()) {
@@ -87,15 +76,9 @@ public:
             iconWatchonly.paint(painter, watchonlyRect);
         }
 
-        if(fConflicted) { // No need to check anything else for conflicted transactions
-            foreground = COLOR_CONFLICTED;
-        } else if (!confirmed || fImmature) {
-            foreground = COLOR_UNCONFIRMED;
-        } else if (amount < 0) {
+        if (amount < 0)
             foreground = COLOR_NEGATIVE;
-        } else {
-            foreground = COLOR_BLACK;
-        }
+
         painter->setPen(foreground);
         QString amountText = BitcoinUnits::formatWithUnit(unit, amount, true, BitcoinUnits::separatorAlways);
         if (!confirmed) {
@@ -387,6 +370,7 @@ void OverviewPage::setWalletModel(WalletModel* model)
 
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
         connect(model->getOptionsModel(), SIGNAL(hideZeroBalancesChanged(bool)), this, SLOT(updateDisplayUnit()));
+        connect(model->getOptionsModel(), SIGNAL(hideOrphansChanged(bool)), this, SLOT(hideOrphans(bool)));
 
         updateWatchOnlyLabels(model->haveWatchOnly());
         connect(model, SIGNAL(notifyWatchonlyChanged(bool)), this, SLOT(updateWatchOnlyLabels(bool)));
@@ -394,6 +378,10 @@ void OverviewPage::setWalletModel(WalletModel* model)
 
     // update the display unit, to not use the default ("BEET")
     updateDisplayUnit();
+
+    // Hide orphans
+    QSettings settings;
+    hideOrphans(settings.value("fHideOrphans", false).toBool());
 }
 
 void OverviewPage::updateDisplayUnit()
@@ -421,4 +409,10 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
     ui->labelWalletStatus->setVisible(fShow);
     ui->labelTransactionsStatus->setVisible(fShow);
+}
+
+void OverviewPage::hideOrphans(bool fHide)
+{
+    if (filter)
+        filter->setHideOrphans(fHide);
 }

@@ -70,7 +70,6 @@ private:
     CAmount currentWatchOnlyBalance;
     CAmount currentWatchUnconfBalance;
     CAmount currentWatchImmatureBalance;
-    
     int nSecurityLevel = 0;
     bool fMinimizeChange = false;
 

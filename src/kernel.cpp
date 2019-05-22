@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <boost/assign/list_of.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include "db.h"
 #include "kernel.h"
@@ -87,7 +86,7 @@ static bool SelectBlockFromCandidates(
     bool fSelected = false;
     uint256 hashBest = 0;
     *pindexSelected = (const CBlockIndex*)0;
-    BOOST_FOREACH (const PAIRTYPE(int64_t, uint256) & item, vSortedByTimestamp) {
+    for (const PAIRTYPE(int64_t, uint256) & item : vSortedByTimestamp) {
         if (!mapBlockIndex.count(item.second))
             return error("SelectBlockFromCandidates: failed to find block index for candidate block %s", item.second.ToString().c_str());
 
@@ -170,7 +169,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
         return error("ComputeNextStakeModifier: unable to get last modifier");
 
     if (GetBoolArg("-printstakemodifier", false))
-        LogPrintf("ComputeNextStakeModifier: prev modifier= %s time=%s\n", boost::lexical_cast<std::string>(nStakeModifier).c_str(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nModifierTime).c_str());
+        LogPrintf("ComputeNextStakeModifier: prev modifier= %s time=%s\n", std::to_string(nStakeModifier).c_str(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nModifierTime).c_str());
 
     if (nModifierTime / getIntervalVersion(fTestNet) >= pindexPrev->GetBlockTime() / getIntervalVersion(fTestNet))
         return true;
@@ -225,7 +224,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
                 strSelectionMap.replace(pindex->nHeight - nHeightFirstCandidate, 1, "=");
             pindex = pindex->pprev;
         }
-        BOOST_FOREACH (const PAIRTYPE(uint256, const CBlockIndex*) & item, mapSelectedBlocks) {
+        for (const std::pair<const uint256, const CBlockIndex*> &item : mapSelectedBlocks) {
             // 'S' indicates selected proof-of-stake blocks
             // 'W' indicates selected proof-of-work blocks
             strSelectionMap.replace(item.second->nHeight - nHeightFirstCandidate, 1, item.second->IsProofOfStake() ? "S" : "W");
@@ -233,7 +232,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
         LogPrintf("ComputeNextStakeModifier: selection height [%d, %d] map %s\n", nHeightFirstCandidate, pindexPrev->nHeight, strSelectionMap.c_str());
     }
     if (GetBoolArg("-printstakemodifier", false)) {
-        LogPrintf("ComputeNextStakeModifier: new modifier=%s time=%s\n", boost::lexical_cast<std::string>(nStakeModifierNew).c_str(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexPrev->GetBlockTime()).c_str());
+        LogPrintf("ComputeNextStakeModifier: new modifier=%s time=%s\n", std::to_string(nStakeModifierNew).c_str(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexPrev->GetBlockTime()).c_str());
     }
 
     nStakeModifier = nStakeModifierNew;
@@ -251,6 +250,11 @@ bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifier, int
     const CBlockIndex* pindexFrom = mapBlockIndex[hashBlockFrom];
     nStakeModifierHeight = pindexFrom->nHeight;
     nStakeModifierTime = pindexFrom->GetBlockTime();
+    // Fixed stake modifier only for regtest
+    if (Params().NetworkID() == CBaseChainParams::REGTEST) {
+        nStakeModifier = pindexFrom->nStakeModifier;
+        return true;
+    }
     int64_t nStakeModifierSelectionInterval = GetStakeModifierSelectionInterval();
     const CBlockIndex* pindex = pindexFrom;
     CBlockIndex* pindexNext = chainActive[pindexFrom->nHeight + 1];
@@ -274,7 +278,7 @@ bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifier, int
 }
 
 //test hash vs target
-bool stakeTargetHit(uint256 hashProofOfStake, int64_t nValueIn, uint256 bnTargetPerCoinDay)
+bool stakeTargetHit(const uint256& hashProofOfStake, const int64_t& nValueIn, const uint256& bnTargetPerCoinDay)
 {
     //get the stake weight - weight is equal to coin amount
     uint256 bnCoinDayWeight = uint256(nValueIn) / 100;
@@ -296,12 +300,15 @@ bool CheckStake(const CDataStream& ssUniqueID, CAmount nValueIn, const uint64_t 
 
 bool Stake(CStakeInput* stakeInput, unsigned int nBits, unsigned int nTimeBlockFrom, unsigned int& nTimeTx, uint256& hashProofOfStake)
 {
-    if (nTimeTx < nTimeBlockFrom)
-        return error("CheckStakeKernelHash() : nTime violation");
+    if(Params().NetworkID() != CBaseChainParams::REGTEST) {
+        if (nTimeTx < nTimeBlockFrom)
+            return error("CheckStakeKernelHash() : nTime violation");
 
-    if (nTimeBlockFrom + nStakeMinAge > nTimeTx) // Min age requirement
-        return error("CheckStakeKernelHash() : min age violation - nTimeBlockFrom=%d nStakeMinAge=%d nTimeTx=%d",
-                     nTimeBlockFrom, nStakeMinAge, nTimeTx);
+        if ((nTimeBlockFrom + nStakeMinAge > nTimeTx)) // Min age requirement
+            return error("CheckStakeKernelHash() : min age violation - nTimeBlockFrom=%d nStakeMinAge=%d nTimeTx=%d",
+                         nTimeBlockFrom, nStakeMinAge, nTimeTx);
+
+    }
 
     if (CBlockHeader::CURRENT_VERSION == 4 && chainActive.Height() + 1 < Params().ModifierUpgradeBlock() && Params().NetworkID() == CBaseChainParams::MAIN)
         return error("CheckStakeKernelHash() : INFO: staking on new wallet disabled until block %d", Params().ModifierUpgradeBlock()); // Do not stake until the upgrade block
@@ -318,7 +325,7 @@ bool Stake(CStakeInput* stakeInput, unsigned int nBits, unsigned int nTimeBlockF
     bool fSuccess = false;
     unsigned int nTryTime = 0;
     int nHeightStart = chainActive.Height();
-    int nHashDrift = 30;
+    int nHashDrift = 60;
     CDataStream ssUniqueID = stakeInput->GetUniqueness();
     CAmount nValueIn = stakeInput->GetValue();
     for (int i = 0; i < nHashDrift; i++) //iterate the hashing

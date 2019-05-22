@@ -82,7 +82,7 @@ public:
         cachedAddressTable.clear();
         {
             LOCK(wallet->cs_wallet);
-            BOOST_FOREACH (const PAIRTYPE(CTxDestination, CAddressBookData) & item, wallet->mapAddressBook) {
+            for (const PAIRTYPE(CTxDestination, CAddressBookData) & item : wallet->mapAddressBook) {
                 const CBitcoinAddress& address = item.first;
                 bool fMine = IsMine(*wallet, address.Get());
                 AddressTableEntry::Type addressType = translateTransactionType(
@@ -141,7 +141,7 @@ public:
             break;
         }
     }
-    
+
     void updateEntry(const QString &pubCoin, const QString &isUsed, int status)
     {
         // Find address / label in model
@@ -152,7 +152,7 @@ public:
         int lowerIndex = (lower - cachedAddressTable.begin());
         bool inModel = (lower != upper);
         AddressTableEntry::Type newEntryType = AddressTableEntry::Zerocoin;
-        
+
         switch(status)
         {
             case CT_NEW:
@@ -175,7 +175,7 @@ public:
                 parent->emitDataChanged(lowerIndex);
                 break;
         }
-        
+
     }
 
 
