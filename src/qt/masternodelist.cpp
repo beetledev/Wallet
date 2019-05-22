@@ -34,7 +34,8 @@ MasternodeList::MasternodeList(QWidget* parent) : QWidget(parent),
     ui->startButton->setEnabled(false);
 
     int columnAliasWidth = 100;
-    int columnAddressWidth = 200;
+    int columnAddressWidth = 180;
+    int columnTypeWidth = 80;
     int columnProtocolWidth = 60;
     int columnStatusWidth = 80;
     int columnActiveWidth = 130;
@@ -43,16 +44,18 @@ MasternodeList::MasternodeList(QWidget* parent) : QWidget(parent),
     ui->tableWidgetMyMasternodes->setAlternatingRowColors(true);
     ui->tableWidgetMyMasternodes->setColumnWidth(0, columnAliasWidth);
     ui->tableWidgetMyMasternodes->setColumnWidth(1, columnAddressWidth);
-    ui->tableWidgetMyMasternodes->setColumnWidth(2, columnProtocolWidth);
-    ui->tableWidgetMyMasternodes->setColumnWidth(3, columnStatusWidth);
-    ui->tableWidgetMyMasternodes->setColumnWidth(4, columnActiveWidth);
-    ui->tableWidgetMyMasternodes->setColumnWidth(5, columnLastSeenWidth);
+    ui->tableWidgetMyMasternodes->setColumnWidth(2, columnTypeWidth);
+    ui->tableWidgetMyMasternodes->setColumnWidth(3, columnProtocolWidth);
+    ui->tableWidgetMyMasternodes->setColumnWidth(4, columnStatusWidth);
+    ui->tableWidgetMyMasternodes->setColumnWidth(5, columnActiveWidth);
+    ui->tableWidgetMyMasternodes->setColumnWidth(6, columnLastSeenWidth);
 
     ui->tableWidgetMasternodes->setColumnWidth(0, columnAddressWidth);
-    ui->tableWidgetMasternodes->setColumnWidth(1, columnProtocolWidth);
-    ui->tableWidgetMasternodes->setColumnWidth(2, columnStatusWidth);
-    ui->tableWidgetMasternodes->setColumnWidth(3, columnActiveWidth);
-    ui->tableWidgetMasternodes->setColumnWidth(4, columnLastSeenWidth);
+    ui->tableWidgetMasternodes->setColumnWidth(1, columnTypeWidth);
+    ui->tableWidgetMasternodes->setColumnWidth(2, columnProtocolWidth);
+    ui->tableWidgetMasternodes->setColumnWidth(3, columnStatusWidth);
+    ui->tableWidgetMasternodes->setColumnWidth(4, columnActiveWidth);
+    ui->tableWidgetMasternodes->setColumnWidth(5, columnLastSeenWidth);
 
     ui->tableWidgetMyMasternodes->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -103,7 +106,7 @@ void MasternodeList::StartAlias(std::string strAlias)
     std::string strStatusHtml;
     strStatusHtml += "<center>Alias: " + strAlias;
 
-    BOOST_FOREACH (CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
         if (mne.getAlias() == strAlias) {
             std::string strError;
             CMasternodeBroadcast mnb;
@@ -135,7 +138,7 @@ void MasternodeList::StartAll(std::string strCommand)
     int nCountFailed = 0;
     std::string strFailedHtml;
 
-    BOOST_FOREACH (CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
         std::string strError;
         CMasternodeBroadcast mnb;
 
@@ -236,14 +239,13 @@ void MasternodeList::updateMyNodeList(bool fForce)
     nTimeMyListUpdated = GetTime();
 
     ui->tableWidgetMasternodes->setSortingEnabled(false);
-    BOOST_FOREACH (CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
         int nIndex;
         if(!mne.castOutputIndex(nIndex))
             continue;
 
         CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(nIndex));
         CMasternode* pmn = mnodeman.Find(txin);
-
         updateMyMasternodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), pmn);
     }
     ui->tableWidgetMasternodes->setSortingEnabled(true);

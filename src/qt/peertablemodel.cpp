@@ -59,9 +59,8 @@ public:
                 return;
             }
             cachedNodeStats.clear();
-#if QT_VERSION >= 0x040700
+
             cachedNodeStats.reserve(vNodes.size());
-#endif
             foreach (CNode* pnode, vNodes) {
                 CNodeCombinedStats stats;
                 stats.nodeStateStats.nMisbehavior = 0;
@@ -77,7 +76,7 @@ public:
         {
             TRY_LOCK(cs_main, lockMain);
             if (lockMain) {
-                BOOST_FOREACH (CNodeCombinedStats& stats, cachedNodeStats)
+                for (CNodeCombinedStats& stats : cachedNodeStats)
                     stats.fNodeStateStatsAvailable = GetNodeStateStats(stats.nodeStats.nodeid, stats.nodeStateStats);
             }
         }

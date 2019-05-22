@@ -204,6 +204,7 @@ public:
 
     bool getPubKey(const CKeyID& address, CPubKey& vchPubKeyOut) const;
     bool isMine(CBitcoinAddress address);
+    bool isUsed(CBitcoinAddress address);
     void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
     bool isSpent(const COutPoint& outpoint) const;
     void listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const;
@@ -256,8 +257,8 @@ private:
 
 signals:
     // Signal that balance in wallet changed
-    void balanceChanged(const CAmount& balance, const CAmount& unconfirmedBalance, const CAmount& immatureBalance, 
-                        const CAmount& zerocoinBalance, const CAmount& unconfirmedZerocoinBalance, const CAmount& immatureZerocoinBalance, 
+    void balanceChanged(const CAmount& balance, const CAmount& unconfirmedBalance, const CAmount& immatureBalance,
+                        const CAmount& zerocoinBalance, const CAmount& unconfirmedZerocoinBalance, const CAmount& immatureZerocoinBalance,
                         const CAmount& watchOnlyBalance, const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
     // Encryption status of wallet changed
@@ -282,6 +283,9 @@ signals:
 
     // MultiSig address added
     void notifyMultiSigChanged(bool fHaveMultiSig);
+
+    // Receive tab address may have changed
+    void notifyReceiveAddressChanged();
 
 public slots:
     /* Wallet status might have changed */
