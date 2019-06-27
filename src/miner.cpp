@@ -621,6 +621,8 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
             }
         }
 
+        MilliSleep(1000);
+
         //
         // Create new block
         //
