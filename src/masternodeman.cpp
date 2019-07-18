@@ -1049,10 +1049,10 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             return;
         }
 
-        if (Params().NetworkID() == CBaseChainParams::MAIN) {
-            if (addr.GetPort() != 3133) return;
-        } else if (addr.GetPort() == 3133)
-            return;
+        // if (Params().NetworkID() == CBaseChainParams::MAIN) {
+            // if (addr.GetPort() != 3133) return;
+        // } else if (addr.GetPort() == 3133)
+            // return;
 
         //search existing Masternode list, this is where we update existing Masternodes with new dsee broadcasts
         CMasternode* pmn = this->Find(vin);
@@ -1273,9 +1273,9 @@ void CMasternodeMan::Remove(CTxIn vin)
 
 void CMasternodeMan::UpdateMasternodeList(CMasternodeBroadcast mnb)
 {
-	mapSeenMasternodePing.insert(make_pair(mnb.lastPing.GetHash(), mnb.lastPing));
-	mapSeenMasternodeBroadcast.insert(make_pair(mnb.GetHash(), mnb));
-	masternodeSync.AddedMasternodeList(mnb.GetHash());
+    mapSeenMasternodePing.insert(make_pair(mnb.lastPing.GetHash(), mnb.lastPing));
+    mapSeenMasternodeBroadcast.insert(make_pair(mnb.GetHash(), mnb));
+    masternodeSync.AddedMasternodeList(mnb.GetHash());
 
     LogPrint("masternode","CMasternodeMan::UpdateMasternodeList() -- masternode=%s\n", mnb.vin.prevout.ToString());
 
@@ -1284,7 +1284,7 @@ void CMasternodeMan::UpdateMasternodeList(CMasternodeBroadcast mnb)
         CMasternode mn(mnb);
         Add(mn);
     } else {
-    	pmn->UpdateFromNewBroadcast(mnb);
+        pmn->UpdateFromNewBroadcast(mnb);
     }
 }
 

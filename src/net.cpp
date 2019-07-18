@@ -1381,9 +1381,9 @@ void ThreadOpenConnections()
             if (nANow - addr.nLastTry < 600 && nTries < 30)
                 continue;
 
-            // // do not allow non-default ports, unless after 50 invalid addresses selected already
+            // do not allow non-default ports, unless after 50 invalid addresses selected already
             // if (addr.GetPort() != Params().GetDefaultPort() && nTries < 50)
-            //     continue;
+                // continue;
 
             addrConnect = addr;
             break;
