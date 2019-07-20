@@ -5530,6 +5530,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // available. If not, ask the first peer connected for them.
         bool fMissingSporks = !pSporkDB->SporkExists(SPORK_14_NEW_PROTOCOL_ENFORCEMENT) &&
                 !pSporkDB->SporkExists(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2) &&
+                !pSporkDB->SporkExists(SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3) &&
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE);
 
         if (fMissingSporks || !fRequestedSporksIDB){
@@ -6412,6 +6413,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 //       it was the one which was commented out
 int ActiveProtocol()
 {
+    // SPORK_19, used for 2.1.3.5
+    if (IsSporkActive(SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3))
+            return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_3;
+
     // SPORK_15, used for 2.1.3.2
     if (IsSporkActive(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2))
             return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_2;
