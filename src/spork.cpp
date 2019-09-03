@@ -139,6 +139,7 @@ int64_t GetSporkValue(int nSporkID)
         if (nSporkID == SPORK_17_TREASURY_PAYMENT_ENFORCEMENT)  r = SPORK_17_TREASURY_PAYMENT_ENFORCEMENT_DEFAULT;
         if (nSporkID == SPORK_18_NEW_MASTERNODE_TIERS)          r = SPORK_18_NEW_MASTERNODE_TIERS_DEFAULT;
         if (nSporkID == SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3)    r = SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3_DEFAULT;
+        if (nSporkID == SPORK_20_MN_WINNER_MINIMUM_AGE)         r = SPORK_20_MN_WINNER_MINIMUM_AGE_DEFAULT;
 
         if (r == -1) LogPrintf("%s : Unknown Spork %d\n", __func__, nSporkID);
     }
@@ -289,6 +290,7 @@ int CSporkManager::GetSporkIDByName(std::string strName)
     if (strName == "SPORK_17_TREASURY_PAYMENT_ENFORCEMENT" ) return SPORK_17_TREASURY_PAYMENT_ENFORCEMENT;
     if (strName == "SPORK_18_NEW_MASTERNODE_TIERS"         ) return SPORK_18_NEW_MASTERNODE_TIERS;
     if (strName == "SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3"   ) return SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3;
+    if (strName == "SPORK_20_MN_WINNER_MINIMUM_AGE"        ) return SPORK_20_MN_WINNER_MINIMUM_AGE;
 
     return -1;
 }
@@ -309,6 +311,7 @@ std::string CSporkManager::GetSporkNameByID(int id)
     if (id == SPORK_17_TREASURY_PAYMENT_ENFORCEMENT ) return "SPORK_17_TREASURY_PAYMENT_ENFORCEMENT";
     if (id == SPORK_18_NEW_MASTERNODE_TIERS         ) return "SPORK_18_NEW_MASTERNODE_TIERS";
     if (id == SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3   ) return "SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3";
+    if (id == SPORK_20_MN_WINNER_MINIMUM_AGE        ) return "SPORK_20_MN_WINNER_MINIMUM_AGE";
 
     return "Unknown";
 }
