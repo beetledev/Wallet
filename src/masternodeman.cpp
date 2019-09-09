@@ -13,8 +13,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
-#define MN_WINNER_MINIMUM_AGE 8000    // Age in seconds. This should be > MASTERNODE_REMOVAL_SECONDS to avoid misconfigured new nodes in the list.
-
 /** Masternode manager */
 CMasternodeMan mnodeman;
 
@@ -386,7 +384,7 @@ int CMasternodeMan::stable_size(unsigned mnlevel)
 {
     int nStable_size = 0;
     int nMinProtocol = ActiveProtocol();
-    int64_t nMasternode_Min_Age = MN_WINNER_MINIMUM_AGE;
+    int64_t nMasternode_Min_Age = GetSporkValue(SPORK_20_MN_WINNER_MINIMUM_AGE);
     int64_t nMasternode_Age = 0;
 
     auto check_level = mnlevel != CMasternode::LevelValue::UNSPECIFIED;
@@ -702,7 +700,7 @@ CMasternode* CMasternodeMan::GetCurrentMasterNode(unsigned mnlevel, int mod, int
 int CMasternodeMan::GetMasternodeRank(const CTxIn& vin, int64_t nBlockHeight, int minProtocol, bool fOnlyActive)
 {
     std::vector<pair<int64_t, CTxIn> > vecMasternodeScores;
-    int64_t nMasternode_Min_Age = MN_WINNER_MINIMUM_AGE;
+    int64_t nMasternode_Min_Age = GetSporkValue(SPORK_20_MN_WINNER_MINIMUM_AGE);
     int64_t nMasternode_Age = 0;
 
     //make sure we know about this block
