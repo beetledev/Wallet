@@ -5531,6 +5531,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         bool fMissingSporks = !pSporkDB->SporkExists(SPORK_14_NEW_PROTOCOL_ENFORCEMENT) &&
                 !pSporkDB->SporkExists(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2) &&
                 !pSporkDB->SporkExists(SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3) &&
+                !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) &&
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE);
 
         if (fMissingSporks || !fRequestedSporksIDB){
@@ -6415,6 +6416,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 //       it was the one which was commented out
 int ActiveProtocol()
 {
+    // SPORK_21, used for 2.1.4.0
+    if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4))
+            return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4;
+
     // SPORK_19, used for 2.1.3.5
     if (IsSporkActive(SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3))
             return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_3;
