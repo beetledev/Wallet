@@ -178,9 +178,6 @@ private:
     //! critical section to protect the inner data structures
     mutable CCriticalSection cs;
 
-    //! secret key to randomize bucket select with
-    uint256 nKey;
-
     //! last used nId
     int nIdCount;
 
@@ -206,6 +203,8 @@ private:
     int vvNew[ADDRMAN_NEW_BUCKET_COUNT][ADDRMAN_BUCKET_SIZE];
 
 protected:
+    //! secret key to randomize bucket select with
+    uint256 nKey;
 
     //! Find an entry.
     CAddrInfo* Find(const CNetAddr& addr, int* pnId = NULL);
@@ -237,6 +236,9 @@ protected:
 
     //! Select an address to connect to, if newOnly is set to true, only the new table is selected from.
     CAddrInfo Select_(bool newOnly);
+
+    //! Wraps GetRandInt to allow tests to override RandomInt and make it determinismistic.
+    virtual int RandomInt(int nMax);
 
 #ifdef DEBUG_ADDRMAN
     //! Perform consistency check. Returns an error code or zero.
@@ -463,7 +465,7 @@ public:
     }
 
     //! Return the number of (unique) addresses in all tables.
-    size_t size() const
+    int size()
     {
         return vRandom.size();
     }
@@ -573,12 +575,6 @@ public:
             Check();
         }
     }
-    
-    //! Ensure that bucket placement is always the same for testing purposes.
-    void MakeDeterministic(){
-        nKey.SetNull(); //Do not use outside of tests.
-    }
-
 };
 
 #endif // BITCOIN_ADDRMAN_H
