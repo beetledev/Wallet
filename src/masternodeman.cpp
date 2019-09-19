@@ -615,7 +615,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     uint256 nHigh = 0;
     for (PAIRTYPE(int64_t, CTxIn) & s : vecMasternodeLastPaid) {
         CMasternode* pmn = Find(s.second);
-        if (!pmn) break;
+        if (!pmn) continue;
 
         uint256 n = pmn->CalculateScore(1, nBlockHeight - 100);
         if (n > nHigh) {
@@ -838,19 +838,18 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         CMasternodeBroadcast mnb;
         vRecv >> mnb;
 
-        // auto pmn = mnodeman.Find(mnb.addr);
+        auto pmn = mnodeman.Find(mnb.addr);
 
-        // if (pmn && pmn->vin != mnb.vin)
-        // {
-            // pmn->Check(true);
+        if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && pmn && pmn->vin != mnb.vin) {
+            pmn->Check(true);
 
-            // if (pmn->IsEnabled())
-            // {
-                // LogPrintf("mnb - More than one vin used for single IP address\n");
-                // Misbehaving(pfrom->GetId(), 100);
-                // return;
-            // }
-        // }
+            if (pmn->IsEnabled())
+            {
+                LogPrintf("mnb - More than one vin used for single IP address, new mnb.addr=%s, existing pmn->addr=%s\n", mnb.addr.ToString(), pmn->addr.ToString());
+                Misbehaving(pfrom->GetId(), 100);
+                return;
+            }
+        }
 
         if (mapSeenMasternodeBroadcast.count(mnb.GetHash())) { //seen
             masternodeSync.AddedMasternodeList(mnb.GetHash());
@@ -884,8 +883,10 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         } else {
             LogPrint("masternode","mnb - Rejected Masternode entry %s\n", mnb.vin.prevout.hash.ToString());
 
-            if (nDoS > 0)
+            if (nDoS > 0) {
                 Misbehaving(pfrom->GetId(), nDoS);
+                return;
+            }
         }
     }
 
@@ -955,8 +956,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
                     pfrom->PushInventory(CInv(MSG_MASTERNODE_ANNOUNCE, hash));
                     nInvCount++;
 
-                    if (!mapSeenMasternodeBroadcast.count(hash))
+                    if (!mapSeenMasternodeBroadcast.count(hash)) {
                         mapSeenMasternodeBroadcast.insert(std::make_pair(hash, mnb));
+                    }
 
                     if (vin == mn.vin) {
                         LogPrint("masternode", "dseg - Sent 1 Masternode entry to peer %i\n", pfrom->GetId());
