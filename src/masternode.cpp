@@ -254,9 +254,6 @@ void CMasternode::Check(bool forceCheck)
 
 int64_t CMasternode::SecondsSincePayment()
 {
-    CScript pubkeyScript;
-    pubkeyScript = GetScriptForDestination(pubKeyCollateralAddress.GetID());
-
     int64_t sec = (GetAdjustedTime() - GetLastPaid());
     int64_t month = 60 * 60 * 24 * 30;
     if (sec < month) return sec; //if it's less than 30 days, give seconds
@@ -499,6 +496,16 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     // wait for reindex and/or import to finish
     if (fImporting || fReindex) return false;
 
+    auto mnode = mnodeman.Find(service);
+
+    if(mnode && mnode->vin != txin)
+    {
+        strErrorRet = strprintf("Duplicate Masternode address: %s", service.ToString());
+        LogPrintf("CMasternodeBroadcast::Create -- ActiveMasternode::Register() -  %s\n", strErrorRet);
+        mnbRet = CMasternodeBroadcast();
+        return false;
+    }
+
     LogPrint("masternode", "CMasternodeBroadcast::Create -- pubKeyCollateralAddressNew = %s, pubKeyMasternodeNew.GetID() = %s\n",
         CBitcoinAddress(pubKeyCollateralAddressNew.GetID()).ToString(),
         pubKeyMasternodeNew.GetID().ToString());
@@ -588,8 +595,7 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
     }
 
     std::string errorMessage = "";
-    if (!obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetNewStrMessage(), errorMessage)
-            && !obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetOldStrMessage(), errorMessage))
+    if (!obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetStrMessage(), errorMessage))
     {
         // don't ban for old masternodes, their sigs could be broken because of the bug
         nDos = protocolVersion < MIN_PEER_MNANNOUNCE ? 0 : 100;
@@ -740,11 +746,7 @@ bool CMasternodeBroadcast::Sign(CKey& keyCollateralAddress)
     std::string errorMessage;
     sigTime = GetAdjustedTime();
 
-    std::string strMessage;
-    if(chainActive.Height() < Params().Zerocoin_Block_V2_Start())
-        strMessage = GetOldStrMessage();
-    else
-        strMessage = GetNewStrMessage();
+    std::string strMessage = GetStrMessage();
 
     if (!obfuScationSigner.SignMessage(strMessage, errorMessage, sig, keyCollateralAddress))
         return error("CMasternodeBroadcast::Sign() - Error: %s", errorMessage);
@@ -760,31 +762,20 @@ bool CMasternodeBroadcast::VerifySignature()
 {
     std::string errorMessage;
 
-    if(!obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetNewStrMessage(), errorMessage)
-            && !obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetOldStrMessage(), errorMessage))
+    if(!obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetStrMessage(), errorMessage))
         return error("CMasternodeBroadcast::VerifySignature() - Error: %s", errorMessage);
 
     return true;
 }
 
-std::string CMasternodeBroadcast::GetOldStrMessage()
+std::string CMasternodeBroadcast::GetStrMessage()
 {
-    std::string strMessage;
-
-    std::string vchPubKey(pubKeyCollateralAddress.begin(), pubKeyCollateralAddress.end());
-    std::string vchPubKey2(pubKeyMasternode.begin(), pubKeyMasternode.end());
-    strMessage = addr.ToString() + std::to_string(sigTime) + vchPubKey + vchPubKey2 + std::to_string(protocolVersion);
-
-    return strMessage;
-}
-
-std:: string CMasternodeBroadcast::GetNewStrMessage()
-{
-    std::string strMessage;
-
-    strMessage = addr.ToString() + std::to_string(sigTime) + pubKeyCollateralAddress.GetID().ToString() + pubKeyMasternode.GetID().ToString() + std::to_string(protocolVersion);
-
-    return strMessage;
+    return (addr.ToString() +
+            std::to_string(sigTime) +
+            pubKeyCollateralAddress.GetID().ToString() +
+            pubKeyMasternode.GetID().ToString() +
+            std::to_string(protocolVersion)
+    );
 }
 
 CMasternodePing::CMasternodePing()

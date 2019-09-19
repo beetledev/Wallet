@@ -270,14 +270,17 @@ public:
 
     int GetMasternodeInputAge()
     {
-        if (chainActive.Tip() == NULL) return 0;
+        auto chain_tip = chainActive.Tip();
+
+        if (!chain_tip)
+            return 0;
 
         if (cacheInputAge == 0) {
             cacheInputAge = GetInputAge(vin);
-            cacheInputAgeBlock = chainActive.Tip()->nHeight;
+            cacheInputAgeBlock = chain_tip->nHeight;
         }
 
-        return cacheInputAge + (chainActive.Tip()->nHeight - cacheInputAgeBlock);
+        return cacheInputAge + (chain_tip->nHeight - cacheInputAgeBlock);
     }
 
     std::string GetStatus();
@@ -321,8 +324,7 @@ public:
     bool Sign(CKey& keyCollateralAddress);
     bool VerifySignature();
     void Relay();
-    std::string GetOldStrMessage();
-    std::string GetNewStrMessage();
+    std::string GetStrMessage();
 
     ADD_SERIALIZE_METHODS;
 

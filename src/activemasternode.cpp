@@ -278,6 +278,15 @@ bool CActiveMasternode::CreateBroadcast(CTxIn vin, CService service, CKey keyCol
     // wait for reindex and/or import to finish
     if (fImporting || fReindex) return false;
 
+    auto mnode = mnodeman.Find(service);
+
+    if(mnode && mnode->vin != vin)
+    {
+        errorMessage = strprintf("Duplicate Masternode address: %s", service.ToString());
+        LogPrintf("CActiveMasternode::Register() -  %s\n", errorMessage);
+        return false;
+    }
+
     CMasternodePing mnp(vin);
     if (!mnp.Sign(keyMasternode, pubKeyMasternode)) {
         errorMessage = strprintf("Failed to sign ping, vin: %s", vin.ToString());

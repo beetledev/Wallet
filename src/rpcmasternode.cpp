@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2015-2018 The PIVX developers
-// Copyright (c) 2018-2019 The ProjectCoin Core developers
+// Copyright (c) 2017-2018 The XDNA Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -426,33 +426,45 @@ UniValue masternodecurrent (const UniValue& params, bool fHelp)
     if (fHelp || (params.size() != 0))
         throw runtime_error(
             "masternodecurrent\n"
-            "\nGet current masternode winner\n"
+            "\nGet current masternode winners\n"
 
             "\nResult:\n"
-            "{\n"
-            "  \"protocol\": xxxx,        (numeric) Protocol version\n"
-            "  \"txhash\": \"xxxx\",      (string) Collateral transaction hash\n"
-            "  \"pubkey\": \"xxxx\",      (string) MN Public key\n"
-            "  \"lastseen\": xxx,       (numeric) Time since epoch of last seen\n"
-            "  \"activeseconds\": xxx,  (numeric) Seconds MN has been active\n"
-            "}\n"
+            "[\n"
+            "  {\n"
+            "    \"level\": xxxx,         (numeric) MN level\n"
+            "    \"protocol\": xxxx,      (numeric) Protocol version\n"
+            "    \"txhash\": \"xxxx\",    (string)  Collateral transaction hash\n"
+            "    \"pubkey\": \"xxxx\",    (string)  MN Public key\n"
+            "    \"lastseen\": xxx,       (numeric) Time since epoch of last seen\n"
+            "    \"activeseconds\": xxx,  (numeric) Seconds MN has been active\n"
+            "  },\n"
+            "  ...\n"
+            "]\n"
             "\nExamples:\n" +
             HelpExampleCli("masternodecurrent", "") + HelpExampleRpc("masternodecurrent", ""));
 
-    //fixme: GetCurrentMasterNode add MN level
-    CMasternode* winner = mnodeman.GetCurrentMasterNode(CMasternode::LevelValue::UNSPECIFIED, 1);
-    if (winner) {
+    UniValue result{UniValue::VARR};
+
+    for(unsigned l = CMasternode::LevelValue::MIN; l <= CMasternode::LevelValue::MAX; ++l) {
+
+        CMasternode* winner = mnodeman.GetCurrentMasterNode(l, 1);
+
+        if(!winner)
+            continue;
+
         UniValue obj(UniValue::VOBJ);
 
+        obj.push_back(Pair("level", winner->Level()));
         obj.push_back(Pair("protocol", (int64_t)winner->protocolVersion));
         obj.push_back(Pair("txhash", winner->vin.prevout.hash.ToString()));
         obj.push_back(Pair("pubkey", CBitcoinAddress(winner->pubKeyCollateralAddress.GetID()).ToString()));
         obj.push_back(Pair("lastseen", (winner->lastPing == CMasternodePing()) ? winner->sigTime : (int64_t)winner->lastPing.sigTime));
         obj.push_back(Pair("activeseconds", (winner->lastPing == CMasternodePing()) ? 0 : (int64_t)(winner->lastPing.sigTime - winner->sigTime)));
-        return obj;
+
+        result.push_back(obj);
     }
 
-    throw runtime_error("unknown");
+    return result;
 }
 
 UniValue masternodedebug (const UniValue& params, bool fHelp)
