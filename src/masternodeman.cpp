@@ -567,7 +567,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
         Make a vector with all of the last paid times
     */
 
-    unsigned nMnCount = CountEnabled(mnlevel);
+    int nMnCount = CountEnabled(mnlevel);
 
     for (CMasternode& mn : vMasternodes) {
         mn.Check();
@@ -583,7 +583,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
             continue;
 
         //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
-        if (masternodePayments.IsScheduled(mn, nBlockHeight))
+        if (masternodePayments.IsScheduled(mn, nMnCount, nBlockHeight))
             continue;
 
         //it's too new, wait for a cycle
@@ -591,7 +591,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
             continue;
 
         //make sure it has as many confirmations as there are masternodes
-        if (mn.GetMasternodeInputAge() < (int)nMnCount)
+        if (mn.GetMasternodeInputAge() < nMnCount)
             continue;
 
         vecMasternodeLastPaid.push_back(std::make_pair(mn.SecondsSincePayment(), mn.vin));
@@ -600,7 +600,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     nCount = (int)vecMasternodeLastPaid.size();
 
     //when the network is in the process of upgrading, don't penalize nodes that recently restarted
-    if (fFilterSigTime && nCount < nMnCount / 3)
+    if (fFilterSigTime && (int)nCount < nMnCount / 3)
         return GetNextMasternodeInQueueForPayment(nBlockHeight, mnlevel, false, nCount);
 
     // Sort them high to low

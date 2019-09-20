@@ -177,15 +177,16 @@ void DumpMasternodePayments()
 bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMinted)
 {
     CBlockIndex* pindexPrev = chainActive.Tip();
-    if (pindexPrev == NULL) return true;
+    if (pindexPrev == NULL)
+        return true;
 
     int nHeight = 0;
     if (pindexPrev->GetBlockHash() == block.hashPrevBlock) {
         nHeight = pindexPrev->nHeight + 1;
     } else { //out of order
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
-        if (mi != mapBlockIndex.end() && (*mi).second)
-            nHeight = (*mi).second->nHeight + 1;
+        if (mi != mapBlockIndex.end() && mi->second)
+            nHeight = mi->second->nHeight + 1;
     }
 
     if (nHeight == 0) {
@@ -526,7 +527,7 @@ bool CMasternodePayments::GetBlockPayee(int nBlockHeight, unsigned mnlevel, CScr
 
 // Is this masternode scheduled to get paid soon?
 // -- Only look ahead up to 8 blocks to allow for propagation of the latest 2 winners
-bool CMasternodePayments::IsScheduled(CMasternode& mn, int nNotBlockHeight) const
+bool CMasternodePayments::IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight) const
 {
     LOCK(cs_mapMasternodeBlocks);
 
@@ -547,7 +548,7 @@ bool CMasternodePayments::IsScheduled(CMasternode& mn, int nNotBlockHeight) cons
 
     CScript mnpayee = GetScriptForDestination(mn.pubKeyCollateralAddress.GetID());
 
-    for(int64_t h = nHeight; h <= nHeight + 8; ++h) {
+    for(int64_t h_upper_bound = nHeight + 10, h = h_upper_bound - std::min(10, nSameLevelMNCount - 1); h < h_upper_bound; ++h) {
 
         if(h == nNotBlockHeight)
             continue;
@@ -573,7 +574,7 @@ bool CMasternodePayments::CanVote(const COutPoint& outMasternode, int nBlockHeig
 {
     LOCK(cs_mapMasternodePayeeVotes);
 
-    uint256 key = outMasternode.hash + outMasternode.n + mnlevel;
+    uint256 key = ((outMasternode.hash + outMasternode.n) << 4) + mnlevel;
 
     auto ins_res = mapMasternodesLastVote.emplace(key, nBlockHeight);
 
@@ -581,7 +582,7 @@ bool CMasternodePayments::CanVote(const COutPoint& outMasternode, int nBlockHeig
 
         auto& last_vote = ins_res.first->second;
 
-        if(last_vote <= nBlockHeight)
+        if(last_vote >= nBlockHeight)
             return false;
 
         last_vote = nBlockHeight;
@@ -593,6 +594,7 @@ bool CMasternodePayments::CanVote(const COutPoint& outMasternode, int nBlockHeig
 bool CMasternodePayments::AddWinningMasternode(CMasternodePaymentWinner& winnerIn)
 {
     uint256 blockHash = 0;
+
     if (!GetBlockHash(blockHash, winnerIn.nBlockHeight - 100)) {
         return false;
     }
@@ -683,7 +685,6 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
     }
 
     LogPrint("masternode","CMasternodePayments::IsTransactionValid - Missing required payment to %s\n", strPayeesPossible.c_str());
-    //LogPrint("masternode","CMasternodePayments::IsTransactionValid - Missing required payment of %s to %s\n", FormatMoney(requiredMasternodePayment).c_str(), strPayeesPossible.c_str());
     return false;
 }
 
@@ -742,7 +743,7 @@ void CMasternodePayments::CleanPaymentList()
     }
 
     //keep up to five cycles for historical sake
-    int nLimit = std::max(mnodeman.size() * 125 / 100, 1000);
+    int nLimit = std::max(mnodeman.size() * 125 / 100, 3000);
 
     std::map<uint256, CMasternodePaymentWinner>::iterator it = mapMasternodePayeeVotes.begin();
     while (it != mapMasternodePayeeVotes.end()) {

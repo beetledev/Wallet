@@ -10,6 +10,7 @@
 #include "obfuscation.h"
 #include "sync.h"
 #include "util.h"
+#include "spork.h"
 
 // keep track of the scanning errors I've seen
 std::map<uint256, int> mapSeenMasternodeScanningErrors;
