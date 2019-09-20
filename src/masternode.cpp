@@ -19,23 +19,26 @@ std::map<int64_t, uint256> mapCacheBlockHashes;
 //Get the last hash that matches the modulus given. Processed in reverse order
 bool GetBlockHash(uint256& hash, int nBlockHeight)
 {
-    if (chainActive.Tip() == NULL) return false;
+    auto active_tip = chainActive.Tip();
 
-    if (nBlockHeight == 0)
-        nBlockHeight = chainActive.Tip()->nHeight;
+    if(!active_tip)
+        return false;
+    
+    if (nBlockHeight <= 0)
+        nBlockHeight = active_tip->nHeight;
 
     if (mapCacheBlockHashes.count(nBlockHeight)) {
         hash = mapCacheBlockHashes[nBlockHeight];
         return true;
     }
 
-    const CBlockIndex* BlockLastSolved = chainActive.Tip();
-    const CBlockIndex* BlockReading = chainActive.Tip();
+    const CBlockIndex* BlockLastSolved = active_tip;
+    const CBlockIndex* BlockReading = active_tip;
 
-    if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || chainActive.Tip()->nHeight + 1 < nBlockHeight) return false;
+    if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || active_tip->nHeight + 1 < nBlockHeight) return false;
 
     int nBlocksAgo = 0;
-    if (nBlockHeight > 0) nBlocksAgo = (chainActive.Tip()->nHeight + 1) - nBlockHeight;
+    if (nBlockHeight > 0) nBlocksAgo = (active_tip->nHeight + 1) - nBlockHeight;
     assert(nBlocksAgo >= 0);
 
     int n = 0;
@@ -146,22 +149,23 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
 //
 bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
 {
-    if (mnb.sigTime > sigTime) {
-        pubKeyMasternode = mnb.pubKeyMasternode;
-        pubKeyCollateralAddress = mnb.pubKeyCollateralAddress;
-        sigTime = mnb.sigTime;
-        sig = mnb.sig;
-        protocolVersion = mnb.protocolVersion;
-        addr = mnb.addr;
-        lastTimeChecked = 0;
-        int nDoS = 0;
-        if (mnb.lastPing == CMasternodePing() || (mnb.lastPing != CMasternodePing() && mnb.lastPing.CheckAndUpdate(nDoS, false))) {
-            lastPing = mnb.lastPing;
-            mnodeman.mapSeenMasternodePing.insert(std::make_pair(lastPing.GetHash(), lastPing));
-        }
-        return true;
+    if(mnb.sigTime <= sigTime)
+        return false;
+
+    pubKeyMasternode = mnb.pubKeyMasternode;
+    pubKeyCollateralAddress = mnb.pubKeyCollateralAddress;
+    sigTime = mnb.sigTime;
+    sig = mnb.sig;
+    protocolVersion = mnb.protocolVersion;
+    addr = mnb.addr;
+    lastTimeChecked = 0;
+    int nDoS = 0;
+    if (mnb.lastPing == CMasternodePing() || (mnb.lastPing != CMasternodePing() && mnb.lastPing.CheckAndUpdate(nDoS, false))) {
+        lastPing = mnb.lastPing;
+        mnodeman.mapSeenMasternodePing.insert(std::make_pair(lastPing.GetHash(), lastPing));
     }
-    return false;
+
+    return true;
 }
 
 //
@@ -171,7 +175,8 @@ bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
 //
 uint256 CMasternode::CalculateScore(int mod, int64_t nBlockHeight)
 {
-    if (chainActive.Tip() == NULL) return 0;
+    if (chainActive.Tip() == NULL)
+        return 0;
 
     uint256 hash = 0;
     uint256 aux = vin.prevout.hash + vin.prevout.n;
@@ -197,15 +202,17 @@ uint256 CMasternode::CalculateScore(int mod, int64_t nBlockHeight)
 
 void CMasternode::Check(bool forceCheck)
 {
-    if (ShutdownRequested()) return;
+    if (ShutdownRequested())
+        return;
 
-    if (!forceCheck && (GetTime() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
+    if (!forceCheck && (GetTime() - lastTimeChecked < MASTERNODE_CHECK_SECONDS))
+        return;
+
     lastTimeChecked = GetTime();
 
-
     //once spent, stop doing the checks
-    if (activeState == MASTERNODE_VIN_SPENT) return;
-
+    if (activeState == MASTERNODE_VIN_SPENT)
+        return;
 
     if (!IsPingedWithin(MASTERNODE_REMOVAL_SECONDS)) {
         activeState = MASTERNODE_REMOVE;
@@ -259,7 +266,9 @@ int64_t CMasternode::SecondsSincePayment()
 {
     int64_t sec = (GetAdjustedTime() - GetLastPaid());
     int64_t month = 60 * 60 * 24 * 30;
-    if (sec < month) return sec; //if it's less than 30 days, give seconds
+
+    if (sec < month)
+        return sec; //if it's less than 30 days, give seconds
 
     CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
     ss << vin;
@@ -499,7 +508,8 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
 bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollateralAddressNew, CPubKey pubKeyCollateralAddressNew, CKey keyMasternodeNew, CPubKey pubKeyMasternodeNew, std::string& strErrorRet, CMasternodeBroadcast& mnbRet)
 {
     // wait for reindex and/or import to finish
-    if (fImporting || fReindex) return false;
+    if (fImporting || fReindex)
+        return false;
 
     if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4)) {
         auto mnode = mnodeman.Find(service);
@@ -549,12 +559,11 @@ bool CMasternodeBroadcast::CheckDefaultPort(std::string strService, std::string&
 {
     // CService service = CService(strService);
     // int nDefaultPort = Params().GetDefaultPort();
-
+    // 
     // if (service.GetPort() != nDefaultPort) {
-       // strErrorRet = strprintf("Invalid port %u for masternode %s, only %d is supported on %s-net.",
-                                       // service.GetPort(), strService, nDefaultPort, Params().NetworkIDString());
-       // LogPrint("masternode", "%s - %s\n", strContext, strErrorRet);
-       // return false;
+    //    strErrorRet = strprintf("Invalid port %u for masternode %s, only %d is supported on %s-net.", service.GetPort(), strService, nDefaultPort, Params().NetworkIDString());
+    //    LogPrint("masternode", "%s - %s\n", strContext, strErrorRet);
+    //    return false;
     // }
 
     return true;
@@ -571,7 +580,7 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
 
     // incorrect ping or its sigTime
     if(lastPing == CMasternodePing() || !lastPing.CheckAndUpdate(nDos, false, true))
-    return false;
+        return false;
 
     if (protocolVersion < masternodePayments.GetMinMasternodePaymentsProto()) {
         LogPrint("masternode","mnb - ignoring outdated Masternode %s protocol version %d\n", vin.prevout.hash.ToString(), protocolVersion);
@@ -610,9 +619,9 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
     }
 
     // if (Params().NetworkID() == CBaseChainParams::MAIN) {
-        // if (addr.GetPort() != 3133) return false;
+    //     if (addr.GetPort() != 3133) return false;
     // } else if (addr.GetPort() == 3133)
-        // return false;
+    //     return false;
 
     //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
     CMasternode* pmn = mnodeman.Find(vin);
@@ -630,7 +639,8 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
     }
 
     // masternode is not enabled yet/already, nothing to update
-    if (!pmn->IsEnabled()) return true;
+    if (!pmn->IsEnabled())
+        return true;
 
     // mn.pubkey = pubkey, IsVinAssociatedWithPubkey is validated once below,
     //   after that they just need to match
@@ -655,7 +665,8 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
         return true;
 
     // incorrect ping or its sigTime
-    if(lastPing == CMasternodePing() || !lastPing.CheckAndUpdate(nDoS, false, true)) return false;
+    if(lastPing == CMasternodePing() || !lastPing.CheckAndUpdate(nDoS, false, true))
+        return false;
 
     // search existing Masternode list
     CMasternode* pmn = mnodeman.Find(vin);
@@ -737,9 +748,11 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
     }
 
     bool isLocal = addr.IsRFC1918() || addr.IsLocal();
-    if (Params().NetworkID() == CBaseChainParams::REGTEST) isLocal = false;
+    if (Params().NetworkID() == CBaseChainParams::REGTEST)
+        isLocal = false;
 
-    if (!isLocal) Relay();
+    if (!isLocal)
+        Relay();
 
     return true;
 }

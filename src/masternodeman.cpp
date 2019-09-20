@@ -722,7 +722,8 @@ int CMasternodeMan::GetMasternodeRank(const CTxIn& vin, int64_t nBlockHeight, in
         }
         if (fOnlyActive) {
             mn.Check();
-            if (!mn.IsEnabled()) continue;
+            if (!mn.IsEnabled())
+                continue;
         }
         uint256 n = mn.CalculateScore(1, nBlockHeight);
         int64_t n2 = n.GetCompact(false);
@@ -855,6 +856,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             masternodeSync.AddedMasternodeList(mnb.GetHash());
             return;
         }
+
         mapSeenMasternodeBroadcast.insert(std::make_pair(mnb.GetHash(), mnb));
 
         int nDoS = 0;
@@ -902,7 +904,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         mapSeenMasternodePing.insert(std::make_pair(mnp.GetHash(), mnp));
 
         int nDoS = 0;
-        if (mnp.CheckAndUpdate(nDoS)) return;
+        if (mnp.CheckAndUpdate(nDoS))
+            return;
 
         if (nDoS > 0) {
             // if anything significant failed, mark that node
@@ -910,8 +913,10 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         } else {
             // if nothing significant failed, search existing Masternode list
             CMasternode* pmn = Find(mnp.vin);
+
             // if it's known, don't ask for the mnb, just return
-            if (pmn != NULL) return;
+            if (pmn != NULL)
+                return;
         }
 
         // something significant is broken or mn is unknown,
@@ -1049,9 +1054,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         }
 
         // if (Params().NetworkID() == CBaseChainParams::MAIN) {
-            // if (addr.GetPort() != 3133) return;
+        //     if (addr.GetPort() != 3133) return;
         // } else if (addr.GetPort() == 3133)
-            // return;
+        //     return;
 
         //search existing Masternode list, this is where we update existing Masternodes with new dsee broadcasts
         CMasternode* pmn = this->Find(vin);
