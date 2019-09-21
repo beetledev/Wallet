@@ -841,7 +841,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
         auto pmn = mnodeman.Find(mnb.addr);
 
-        if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && pmn && pmn->vin != mnb.vin) {
+        if (mnb.protocolVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && pmn && pmn->vin != mnb.vin) {
             pmn->Check(true);
 
             if (pmn->IsEnabled())
