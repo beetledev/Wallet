@@ -516,7 +516,7 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
 
     if (mnode && mnode->vin != txin) {
         strErrorRet = strprintf("Duplicate Masternode address: %s", service.ToString());
-        LogPrint("masternode","CMasternodeBroadcast::Create -- CActiveMasternode::CreateBroadcast() -  %s\n", strErrorRet);
+        LogPrint("masternode","CMasternodeBroadcast::Create -- %s\n", strErrorRet);
         mnbRet = CMasternodeBroadcast();
         return false;
     }
