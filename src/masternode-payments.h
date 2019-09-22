@@ -129,16 +129,16 @@ public:
 
         auto payment = vecPayments.cend();
 
-        for(auto p = vecPayments.cbegin(), e = vecPayments.cend(); p != e; ++p) {
+        for (auto p = vecPayments.cbegin(), e = vecPayments.cend(); p != e; ++p) {
 
-            if(p->mnlevel != mnlevel)
+            if (p->mnlevel != mnlevel)
                 continue;
 
-            if(payment == vecPayments.cend() || p->nVotes > payment->nVotes)
+            if (payment == vecPayments.cend() || p->nVotes > payment->nVotes)
                 payment = p;
-        };
+        }
 
-        if(payment == vecPayments.cend())
+        if (payment == vecPayments.cend())
             return false;
 
         payee = payment->scriptPubKey;
@@ -254,7 +254,7 @@ private:
 public:
     std::map<uint256, CMasternodePaymentWinner> mapMasternodePayeeVotes;
     std::map<int, CMasternodeBlockPayees> mapMasternodeBlocks;
-    std::map<uint256, int> mapMasternodesLastVote; //prevout.hash + prevout.n + mnlevel, nBlockHeight
+    std::map<uint256, int> mapMasternodesLastVote; // ((outMasternode.hash + outMasternode.n) << 4) + mnlevel, nBlockHeight
 
     CMasternodePayments()
     {
@@ -279,7 +279,7 @@ public:
 
     bool GetBlockPayee(int nBlockHeight, unsigned mnlevel, CScript& payee);
     bool IsTransactionValid(const CTransaction& txNew, int nBlockHeight);
-    bool IsScheduled(CMasternode& mn, int nNotBlockHeight) const;
+    bool IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight) const;
     bool CanVote(const COutPoint& outMasternode, int nBlockHeight, unsigned mnlevel);
 
     int GetMinMasternodePaymentsProto();

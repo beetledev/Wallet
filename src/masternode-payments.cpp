@@ -1,5 +1,6 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2019 The BeetleCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -176,15 +177,16 @@ void DumpMasternodePayments()
 bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMinted)
 {
     CBlockIndex* pindexPrev = chainActive.Tip();
-    if (pindexPrev == NULL) return true;
+    if (pindexPrev == NULL)
+        return true;
 
     int nHeight = 0;
     if (pindexPrev->GetBlockHash() == block.hashPrevBlock) {
         nHeight = pindexPrev->nHeight + 1;
     } else { //out of order
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
-        if (mi != mapBlockIndex.end() && (*mi).second)
-            nHeight = (*mi).second->nHeight + 1;
+        if (mi != mapBlockIndex.end() && mi->second)
+            nHeight = mi->second->nHeight + 1;
     }
 
     if (nHeight == 0) {
@@ -455,15 +457,15 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             return;
         }
 
-        std::string strError = "";
-        if (!winner.IsValid(pfrom, strError)) {
-            // if(strError != "") LogPrintf("mnw - invalid message - %s\n", strError);
+        int nFirstBlock = nHeight - mnodeman.CountEnabled(winner.payeeLevel) * 125 / 100;
+        if (winner.nBlockHeight < nFirstBlock || winner.nBlockHeight > nHeight + 20) {
+            LogPrint("mnpayments", "mnw - winner out of range - FirstBlock %d Height %d bestHeight %d\n", nFirstBlock, winner.nBlockHeight, nHeight);
             return;
         }
 
-        int nFirstBlock = nHeight - mnodeman.CountEnabled(winner.payeeLevel) / 100 * 125;
-        if (winner.nBlockHeight < nFirstBlock || winner.nBlockHeight > nHeight + 20) {
-            LogPrint("mnpayments", "mnw - winner out of range - FirstBlock %d Height %d bestHeight %d\n", nFirstBlock, winner.nBlockHeight, nHeight);
+        std::string strError = "";
+        if (!winner.IsValid(pfrom, strError)) {
+            // if(strError != "") LogPrintf("mnw - invalid message - %s\n", strError);
             return;
         }
 
@@ -525,7 +527,7 @@ bool CMasternodePayments::GetBlockPayee(int nBlockHeight, unsigned mnlevel, CScr
 
 // Is this masternode scheduled to get paid soon?
 // -- Only look ahead up to 8 blocks to allow for propagation of the latest 2 winners
-bool CMasternodePayments::IsScheduled(CMasternode& mn, int nNotBlockHeight) const
+bool CMasternodePayments::IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight) const
 {
     LOCK(cs_mapMasternodeBlocks);
 
@@ -546,7 +548,7 @@ bool CMasternodePayments::IsScheduled(CMasternode& mn, int nNotBlockHeight) cons
 
     CScript mnpayee = GetScriptForDestination(mn.pubKeyCollateralAddress.GetID());
 
-    for(int64_t h = nHeight; h <= nHeight + 8; ++h) {
+    for(int64_t h_upper_bound = nHeight + 10, h = h_upper_bound - std::min(10, nSameLevelMNCount - 1); h < h_upper_bound; ++h) {
 
         if(h == nNotBlockHeight)
             continue;
@@ -572,7 +574,7 @@ bool CMasternodePayments::CanVote(const COutPoint& outMasternode, int nBlockHeig
 {
     LOCK(cs_mapMasternodePayeeVotes);
 
-    uint256 key = outMasternode.hash + outMasternode.n + mnlevel;
+    uint256 key = ((outMasternode.hash + outMasternode.n) << 4) + mnlevel;
 
     auto ins_res = mapMasternodesLastVote.emplace(key, nBlockHeight);
 
@@ -580,7 +582,7 @@ bool CMasternodePayments::CanVote(const COutPoint& outMasternode, int nBlockHeig
 
         auto& last_vote = ins_res.first->second;
 
-        if(last_vote <= nBlockHeight)
+        if(last_vote >= nBlockHeight)
             return false;
 
         last_vote = nBlockHeight;
@@ -592,6 +594,7 @@ bool CMasternodePayments::CanVote(const COutPoint& outMasternode, int nBlockHeig
 bool CMasternodePayments::AddWinningMasternode(CMasternodePaymentWinner& winnerIn)
 {
     uint256 blockHash = 0;
+
     if (!GetBlockHash(blockHash, winnerIn.nBlockHeight - 100)) {
         return false;
     }
@@ -673,7 +676,7 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
         CTxDestination address1;
         ExtractDestination(payee.scriptPubKey, address1);
 
-        auto address2 = std::to_string(payee.mnlevel) + ":" + CBitcoinAddress{address1}.ToString();
+        auto address2 = std::to_string(payee.mnlevel) + ":" + CBitcoinAddress(address1).ToString();
 
         if (strPayeesPossible == "")
             strPayeesPossible += address2;
@@ -697,10 +700,14 @@ std::string CMasternodeBlockPayees::GetRequiredPaymentsString()
         ExtractDestination(payee.scriptPubKey, address1);
         CBitcoinAddress address2(address1);
 
+        std::string payee_str = address2.ToString() + ":"
+                              + boost::lexical_cast<std::string>(payee.mnlevel) + ":"
+                              + boost::lexical_cast<std::string>(payee.nVotes);
+
         if (ret != "Unknown") {
-            ret += ", " + address2.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
+            ret += "," + payee_str;
         } else {
-            ret = address2.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
+            ret = payee_str;
         }
     }
 
@@ -741,7 +748,7 @@ void CMasternodePayments::CleanPaymentList()
     }
 
     //keep up to five cycles for historical sake
-    int nLimit = std::max(mnodeman.size() / 100 * 125, 1000);
+    int nLimit = std::max(mnodeman.size() * 125 / 100, 3000);
 
     std::map<uint256, CMasternodePaymentWinner>::iterator it = mapMasternodePayeeVotes.begin();
     while (it != mapMasternodePayeeVotes.end()) {
@@ -777,13 +784,21 @@ bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
 
     int n = mnodeman.GetMasternodeRank(vinMasternode, nBlockHeight - 100, ActiveProtocol());
 
+    if (n == -1) {
+        strError = strprintf("Unknown Masternode (rank==-1) %s", vinMasternode.prevout.hash.ToString());
+        LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
+        return false;
+    }
+
     if (n > MNPAYMENTS_SIGNATURES_TOTAL) {
         //It's common to have masternodes mistakenly think they are in the top 10
         // We don't want to print all of these messages, or punish them unless they're way off
         if (n > MNPAYMENTS_SIGNATURES_TOTAL * 2) {
             strError = strprintf("Masternode not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL * 2, n);
             LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
-            //if (masternodeSync.IsSynced()) Misbehaving(pnode->GetId(), 20);
+
+            if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && masternodeSync.IsSynced())
+                Misbehaving(pnode->GetId(), 20);
         }
         return false;
     }
@@ -921,7 +936,7 @@ void CMasternodePayments::Sync(CNode* node, int nCountNeeded)
     auto mn_counts = mnodeman.CountEnabledByLevels();
 
     for(auto& count : mn_counts)
-        count.second = std::min(nCountNeeded, count.second / 100 * 125);
+        count.second = std::min(nCountNeeded, count.second * 125 / 100);
 
     int nInvCount = 0;
 

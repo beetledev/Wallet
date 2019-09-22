@@ -1521,7 +1521,7 @@ bool CObfuscationPool::DoAutomaticDenominating(bool fDryRun)
         }
 
         //if we've used 90% of the Masternode list then drop all the oldest first
-        int nThreshold = mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) / 10 * 9;
+        int nThreshold = mnodeman.CountEnabled(CMasternode::LevelValue::UNSPECIFIED, ActiveProtocol()) * 9 / 10;
         LogPrint("obfuscation", "Checking vecMasternodesUsed size %d threshold %d\n", (int)vecMasternodesUsed.size(), nThreshold);
         while ((int)vecMasternodesUsed.size() > nThreshold) {
             vecMasternodesUsed.erase(vecMasternodesUsed.begin());
