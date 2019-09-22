@@ -843,7 +843,10 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             if (pmn->IsEnabled())
             {
                 LogPrintf("mnb - More than one vin used for single IP address, new mnb.addr=%s, existing pmn->addr=%s\n", mnb.addr.ToString(), pmn->addr.ToString());
-                if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4)) Misbehaving(pfrom->GetId(), 100);
+
+                if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4))
+                    Misbehaving(pfrom->GetId(), 100);
+
                 return;
             }
         }
