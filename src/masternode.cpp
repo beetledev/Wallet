@@ -22,9 +22,9 @@ bool GetBlockHash(uint256& hash, int nBlockHeight)
 {
     auto active_tip = chainActive.Tip();
 
-    if(!active_tip)
+    if (!active_tip)
         return false;
-    
+
     if (nBlockHeight <= 0)
         nBlockHeight = active_tip->nHeight;
 
@@ -122,7 +122,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
     pubKeyMasternode = mnb.pubKeyMasternode;
     sig = mnb.sig;
 
-    if(IsDepositCoins(mnb.vin, deposit))
+    if (IsDepositCoins(mnb.vin, deposit))
         activeState = MASTERNODE_ENABLED;
     else
     {
@@ -150,23 +150,22 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
 //
 bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
 {
-    if(mnb.sigTime <= sigTime)
-        return false;
-
-    pubKeyMasternode = mnb.pubKeyMasternode;
-    pubKeyCollateralAddress = mnb.pubKeyCollateralAddress;
-    sigTime = mnb.sigTime;
-    sig = mnb.sig;
-    protocolVersion = mnb.protocolVersion;
-    addr = mnb.addr;
-    lastTimeChecked = 0;
-    int nDoS = 0;
-    if (mnb.lastPing == CMasternodePing() || (mnb.lastPing != CMasternodePing() && mnb.lastPing.CheckAndUpdate(nDoS, false))) {
-        lastPing = mnb.lastPing;
-        mnodeman.mapSeenMasternodePing.insert(std::make_pair(lastPing.GetHash(), lastPing));
+    if (mnb.sigTime > sigTime) {
+        pubKeyMasternode = mnb.pubKeyMasternode;
+        pubKeyCollateralAddress = mnb.pubKeyCollateralAddress;
+        sigTime = mnb.sigTime;
+        sig = mnb.sig;
+        protocolVersion = mnb.protocolVersion;
+        addr = mnb.addr;
+        lastTimeChecked = 0;
+        int nDoS = 0;
+        if (mnb.lastPing == CMasternodePing() || (mnb.lastPing != CMasternodePing() && mnb.lastPing.CheckAndUpdate(nDoS, false))) {
+            lastPing = mnb.lastPing;
+            mnodeman.mapSeenMasternodePing.insert(std::make_pair(lastPing.GetHash(), lastPing));
+        }
+        return true;
     }
-
-    return true;
+    return false;
 }
 
 //
@@ -225,7 +224,7 @@ void CMasternode::Check(bool forceCheck)
         return;
     }
 
-    if(lastPing.sigTime - sigTime < MASTERNODE_MIN_MNP_SECONDS){
+    if (lastPing.sigTime - sigTime < MASTERNODE_MIN_MNP_SECONDS) {
         activeState = MASTERNODE_PRE_ENABLED;
         return;
     }
@@ -360,19 +359,19 @@ bool CMasternode::IsValidNetAddr()
 
 unsigned CMasternode::Level(CAmount vin_val, int blockHeight)
 {
-    if (blockHeight >= 0 && blockHeight < 346500) {
-      switch(vin_val) {
-          case 80000  * COIN: return 1;
-          case 100000 * COIN: return 2;
-          case 150000 * COIN: return 3;
-      }
-    } else {
-      switch(vin_val) {
-          case 10000  * COIN: return 1;
-          case 50000  * COIN: return 2;
-          case 150000 * COIN: return 3;
-      }
-    }
+    // if (blockHeight >= 0 && blockHeight < 346500) {
+        // switch(vin_val) {
+            // case 80000  * COIN: return 1;
+            // case 100000 * COIN: return 2;
+            // case 150000 * COIN: return 3;
+        // }
+    // } else {
+        switch(vin_val) {
+            case 10000  * COIN: return 1;
+            case 50000  * COIN: return 2;
+            case 150000 * COIN: return 3;
+        }
+    // }
 
     return 0;
 }
@@ -515,10 +514,9 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     // always enforce one MN per port rule on all newly created MNs in updated wallet
     auto mnode = mnodeman.Find(service);
 
-    if(mnode && mnode->vin != txin)
-    {
+    if (mnode && mnode->vin != txin) {
         strErrorRet = strprintf("Duplicate Masternode address: %s", service.ToString());
-        LogPrintf("CMasternodeBroadcast::Create -- ActiveMasternode::Register() -  %s\n", strErrorRet);
+        LogPrint("masternode","CMasternodeBroadcast::Create -- CActiveMasternode::CreateBroadcast() -  %s\n", strErrorRet);
         mnbRet = CMasternodeBroadcast();
         return false;
     }

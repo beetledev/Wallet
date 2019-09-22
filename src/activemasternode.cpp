@@ -283,10 +283,9 @@ bool CActiveMasternode::CreateBroadcast(CTxIn vin, CService service, CKey keyCol
     // always enforce one MN per port rule on all newly created MNs in updated wallet
     auto mnode = mnodeman.Find(service);
 
-    if(mnode && mnode->vin != vin)
-    {
+    if (mnode && mnode->vin != vin) {
         errorMessage = strprintf("Duplicate Masternode address: %s", service.ToString());
-        LogPrintf("CActiveMasternode::Register() -  %s\n", errorMessage);
+        LogPrintf("CActiveMasternode::CreateBroadcast() -  %s\n", errorMessage);
         return false;
     }
 
