@@ -254,6 +254,11 @@ bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMin
 
 bool IsBlockPayeeValid(const CBlock& block, int nBlockHeight)
 {
+    static int64_t startTime = 0;
+
+    if (startTime == 0)
+        startTime = GetTime();
+
     TrxValidationStatus transactionStatus = TrxValidationStatus::InValid;
 
     if (!masternodeSync.IsSynced()) { //there is no budget data to use to check anything -- find the longest chain
@@ -290,10 +295,14 @@ bool IsBlockPayeeValid(const CBlock& block, int nBlockHeight)
         //check for masternode payee
         if (masternodePayments.IsTransactionValid(txNew, nBlockHeight))
             return true;
+
         LogPrint("masternode","Invalid mn payment detected %s\n", txNew.ToString().c_str());
 
-        if (IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT))
+        // If the Spork 8 is active I also check if is passed 1h from the node start
+        // to prevent the prevent the block rejection when the mastermode list isn't complete at the node start.
+        if (IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) && GetTime()-startTime > 3600)
             return false;
+
         LogPrint("masternode","Masternode payment enforcement is disabled, accepting block\n");
     }
 
