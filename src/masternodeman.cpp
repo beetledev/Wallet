@@ -398,14 +398,11 @@ int CMasternodeMan::stable_size(unsigned mnlevel)
 
         if (IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
             nMasternode_Age = GetAdjustedTime() - mn.sigTime;
-
             if (nMasternode_Age < nMasternode_Min_Age) {
                 continue; // Skip masternodes younger than (default) 8000 sec (MUST be > MASTERNODE_REMOVAL_SECONDS)
             }
         }
-
         mn.Check();
-
         if (!mn.IsEnabled())
             continue; // Skip not-enabled masternodes
 
@@ -607,10 +604,9 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     sort(vecMasternodeLastPaid.rbegin(), vecMasternodeLastPaid.rend(), CompareLastPaid());
 
     // Look at 1/10 of the oldest nodes (by last payment), calculate their scores and pay the best one
-    //  -- This doesn't look at who is being paid in the +8-10 blocks, allowing for double payments very rarely
-    //  -- 1/100 payments should be a double payment on mainnet - (1/(3000/10))*2
-    //  -- (chance per block * chances before IsScheduled will fire)
-    int nTenthNetwork = CountEnabled(mnlevel) / 10;
+    //  -- This doesn't look at who is being paid in the scheduled blocks, allowing for double payments very rarely
+
+    int nTenthNetwork = nMnCount / 10;
     int nCountTenth = 0;
     uint256 nHigh = 0;
     for (PAIRTYPE(int64_t, CTxIn) & s : vecMasternodeLastPaid) {
@@ -841,13 +837,13 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
         auto pmn = mnodeman.Find(mnb.addr);
 
-        if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && pmn && pmn->vin != mnb.vin) {
+        if (mnb.protocolVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && pmn && pmn->vin != mnb.vin) {
             pmn->Check(true);
 
             if (pmn->IsEnabled())
             {
                 LogPrintf("mnb - More than one vin used for single IP address, new mnb.addr=%s, existing pmn->addr=%s\n", mnb.addr.ToString(), pmn->addr.ToString());
-                Misbehaving(pfrom->GetId(), 100);
+                if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4)) Misbehaving(pfrom->GetId(), 100);
                 return;
             }
         }
@@ -856,7 +852,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             masternodeSync.AddedMasternodeList(mnb.GetHash());
             return;
         }
-
         mapSeenMasternodeBroadcast.insert(std::make_pair(mnb.GetHash(), mnb));
 
         int nDoS = 0;
@@ -913,7 +908,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         } else {
             // if nothing significant failed, search existing Masternode list
             CMasternode* pmn = Find(mnp.vin);
-
             // if it's known, don't ask for the mnb, just return
             if (pmn != NULL)
                 return;

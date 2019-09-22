@@ -280,15 +280,13 @@ bool CActiveMasternode::CreateBroadcast(CTxIn vin, CService service, CKey keyCol
     // wait for reindex and/or import to finish
     if (fImporting || fReindex) return false;
 
-    if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4)) {
-        auto mnode = mnodeman.Find(service);
+    // always enforce one MN per port rule on all newly created MNs in updated wallet
+    auto mnode = mnodeman.Find(service);
 
-        if(mnode && mnode->vin != vin)
-        {
-            errorMessage = strprintf("Duplicate Masternode address: %s", service.ToString());
-            LogPrintf("CActiveMasternode::Register() -  %s\n", errorMessage);
-            return false;
-        }
+    if (mnode && mnode->vin != vin) {
+        errorMessage = strprintf("Duplicate Masternode address: %s", service.ToString());
+        LogPrintf("CActiveMasternode::CreateBroadcast() -  %s\n", errorMessage);
+        return false;
     }
 
     CMasternodePing mnp(vin);
