@@ -712,7 +712,7 @@ int CMasternodeMan::GetMasternodeRank(const CTxIn& vin, int64_t nBlockHeight, in
         if (IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
             nMasternode_Age = GetAdjustedTime() - mn.sigTime;
             if ((nMasternode_Age) < nMasternode_Min_Age) {
-                if (fDebug) LogPrint("masternode","Skipping just activated Masternode. Age: %ld\n", nMasternode_Age);
+                if (fDebug) LogPrint("masternode","Skipping just activated Masternode. Age: %ld - %s\n", nMasternode_Age, mn.vin.prevout.hash.ToString());
                 continue;                                                   // Skip masternodes younger than (default) 1 hour
             }
         }
@@ -1131,7 +1131,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             }
 
             // verify that sig time is legit in past
-            // should be at least not earlier than block when 1000 BeetleCoin tx got MASTERNODE_MIN_CONFIRMATIONS
+            // should be at least not earlier than block when 1000 BEET tx got MASTERNODE_MIN_CONFIRMATIONS
             uint256 hashBlock = 0;
             CTransaction tx2;
             GetTransaction(vin.prevout.hash, tx2, hashBlock, true);

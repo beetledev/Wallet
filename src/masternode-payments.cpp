@@ -15,7 +15,6 @@
 #include "util.h"
 #include "utilmoneystr.h"
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 
 /** Object for who's going to get paid on which blocks */
 CMasternodePayments masternodePayments;
@@ -82,7 +81,7 @@ CMasternodePaymentDB::ReadResult CMasternodePaymentDB::Read(CMasternodePayments&
     // Don't try to resize to a negative number if file is small
     if (dataSize < 0)
         dataSize = 0;
-    vector<unsigned char> vchData;
+    std::vector<unsigned char> vchData;
     vchData.resize(dataSize);
     uint256 hashIn;
 
@@ -185,8 +184,8 @@ bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMin
         nHeight = pindexPrev->nHeight + 1;
     } else { //out of order
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
-        if (mi != mapBlockIndex.end() && mi->second)
-            nHeight = mi->second->nHeight + 1;
+        if (mi != mapBlockIndex.end() && (*mi).second)
+            nHeight = (*mi).second->nHeight + 1;
     }
 
     if (nHeight == 0) {
@@ -204,7 +203,7 @@ bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMin
 
         bool bFound = false;
 
-        BOOST_FOREACH (CTxOut out, txNew.vout) {
+        for (CTxOut out : txNew.vout) {
             if (out.nValue == treasuryAmount && out.scriptPubKey == treasuryPayee) {
                 bFound = true; //We found our treasury payment, let's end it here.
                 break;
@@ -454,38 +453,38 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         auto winner_mn = mnodeman.Find(winner.payee);
 
         if (!winner_mn) {
-            LogPrint("mnpayments", "mnw - unknown payee %s\n", payee_addr.ToString().c_str());
+            LogPrint("mnpayments", "mnw - unknown payee from peer=%s ip=%s%s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str());
             return;
         }
 
         winner.payeeLevel = winner_mn->Level();
 
         if (masternodePayments.mapMasternodePayeeVotes.count(winner.GetHash())) {
-            LogPrint("mnpayments", "mnw - Already seen - %s bestHeight %d\n", winner.GetHash().ToString().c_str(), nHeight);
+            LogPrint("mnpayments", "mnw - Already seen from peer=%s ip=%s - %s bestHeight %d\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), winner.GetHash().ToString().c_str(), nHeight);
             masternodeSync.AddedMasternodeWinner(winner.GetHash());
             return;
         }
 
-        int nFirstBlock = nHeight - mnodeman.CountEnabled(winner.payeeLevel) * 125 / 100;
+        int nFirstBlock = nHeight - (mnodeman.CountEnabled(winner.payeeLevel) * 1.25);
         if (winner.nBlockHeight < nFirstBlock || winner.nBlockHeight > nHeight + 20) {
-            LogPrint("mnpayments", "mnw - winner out of range - FirstBlock %d Height %d bestHeight %d\n", nFirstBlock, winner.nBlockHeight, nHeight);
+            LogPrint("mnpayments", "mnw - winner out of range from peer=%s ip=%s - FirstBlock %d Height %d bestHeight %d\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), nFirstBlock, winner.nBlockHeight, nHeight);
             return;
         }
 
         std::string strError = "";
         if (!winner.IsValid(pfrom, strError)) {
-            // if(strError != "") LogPrintf("mnw - invalid message - %s\n", strError);
+            if(strError != "") LogPrint("mnpayments", "mnw - invalid message from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), strError);
             return;
         }
 
         if (!masternodePayments.CanVote(winner.vinMasternode.prevout, winner.nBlockHeight, winner.payeeLevel)) {
-            //  LogPrintf("mnw - masternode already voted - %s\n", winner.vinMasternode.prevout.ToStringShort());
+            LogPrint("mnpayments", "mnw - masternode already voted from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), winner.vinMasternode.prevout.ToStringShort());
             return;
         }
 
         if (!winner.SignatureValid()) {
             if (masternodeSync.IsSynced()) {
-                LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnw - invalid signature\n");
+                LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnw - invalid signature from peer=%s ip=%s\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
                 Misbehaving(pfrom->GetId(), 20);
             }
             // it could just be a non-synced masternode
@@ -493,7 +492,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             return;
         }
 
-        //   LogPrint("mnpayments", "mnw - winning vote - Addr %s Height %d bestHeight %d - %s\n", payee_addr.ToString().c_str(), winner.nBlockHeight, nHeight, winner.vinMasternode.prevout.ToStringShort());
+        LogPrint("mnpayments", "mnw - winning vote from peer=%s ip=%s v=%s - Addr %s Height %d bestHeight %d - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), pfrom->nVersion, payee_addr.ToString().c_str(), winner.nBlockHeight, nHeight, winner.vinMasternode.prevout.ToStringShort());
 
         if (masternodePayments.AddWinningMasternode(winner)) {
             winner.Relay();
@@ -507,9 +506,7 @@ bool CMasternodePaymentWinner::Sign(CKey& keyMasternode, CPubKey& pubKeyMasterno
     std::string errorMessage;
     std::string strMasterNodeSignMessage;
 
-    std::string strMessage = vinMasternode.prevout.ToStringShort() +
-                             boost::lexical_cast<std::string>(nBlockHeight) +
-                             payee.ToString();
+    std::string strMessage = vinMasternode.prevout.ToStringShort() + std::to_string(nBlockHeight) + payee.ToString();
 
     if (!obfuScationSigner.SignMessage(strMessage, errorMessage, vchSig, keyMasternode)) {
         LogPrint("masternode","CMasternodePing::Sign() - Error: %s\n", errorMessage.c_str());
@@ -526,17 +523,16 @@ bool CMasternodePaymentWinner::Sign(CKey& keyMasternode, CPubKey& pubKeyMasterno
 
 bool CMasternodePayments::GetBlockPayee(int nBlockHeight, unsigned mnlevel, CScript& payee)
 {
-    auto block = mapMasternodeBlocks.find(nBlockHeight);
+    if (mapMasternodeBlocks.count(nBlockHeight)) {
+        return mapMasternodeBlocks[nBlockHeight].GetPayee(mnlevel, payee);
+    }
 
-    if (block == mapMasternodeBlocks.cend())
-        return false;
-
-    return block->second.GetPayee(mnlevel, payee);
+    return false;
 }
 
 // Is this masternode scheduled to get paid soon?
 // -- Only look ahead up to 8 blocks to allow for propagation of the latest 2 winners
-bool CMasternodePayments::IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight) const
+bool CMasternodePayments::IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight)
 {
     LOCK(cs_mapMasternodeBlocks);
 
@@ -562,42 +558,16 @@ bool CMasternodePayments::IsScheduled(CMasternode& mn, int nSameLevelMNCount, in
         if(h == nNotBlockHeight)
             continue;
 
-        auto block_payees = mapMasternodeBlocks.find(h);
-
-        if(block_payees == mapMasternodeBlocks.cend())
-            continue;
-
-        CScript payee;
-
-        if(!block_payees->second.GetPayee(mn.Level(), payee))
-            continue;
-
-        if(mnpayee == payee)
-            return true;
+        if (mapMasternodeBlocks.count(h)) {
+            if (mapMasternodeBlocks[h].GetPayee(mn.Level(), mnpayee)) {
+                if (mnpayee == mnpayee) {
+                    return true;
+                }
+            }
+        }
     }
 
     return false;
-}
-
-bool CMasternodePayments::CanVote(const COutPoint& outMasternode, int nBlockHeight, unsigned mnlevel)
-{
-    LOCK(cs_mapMasternodePayeeVotes);
-
-    uint256 key = ((outMasternode.hash + outMasternode.n) << 4) + mnlevel;
-
-    auto ins_res = mapMasternodesLastVote.emplace(key, nBlockHeight);
-
-    if(!ins_res.second) {
-
-        auto& last_vote = ins_res.first->second;
-
-        if(last_vote >= nBlockHeight)
-            return false;
-
-        last_vote = nBlockHeight;
-    }
-
-    return true;
 }
 
 bool CMasternodePayments::AddWinningMasternode(CMasternodePaymentWinner& winnerIn)
@@ -642,10 +612,10 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
 
         auto ins_res = max_signatures.emplace(payee.mnlevel, payee.nVotes);
 
-        if (ins_res.second)
-            continue;
+        //if (ins_res.second)
+        //    continue;
 
-        if (payee.nVotes >= ins_res.first->second)
+        if (payee.nVotes > ins_res.first->second)
             ins_res.first->second = payee.nVotes;
     }
 
@@ -710,8 +680,8 @@ std::string CMasternodeBlockPayees::GetRequiredPaymentsString()
         CBitcoinAddress address2(address1);
 
         std::string payee_str = address2.ToString() + ":"
-                              + boost::lexical_cast<std::string>(payee.mnlevel) + ":"
-                              + boost::lexical_cast<std::string>(payee.nVotes);
+                              + std::to_string(payee.mnlevel) + ":"
+                              + std::to_string(payee.nVotes);
 
         if (ret != "Unknown") {
             ret += "," + payee_str;
@@ -757,7 +727,7 @@ void CMasternodePayments::CleanPaymentList()
     }
 
     //keep up to five cycles for historical sake
-    int nLimit = std::max(mnodeman.size() * 125 / 100, 3000);
+    int nLimit = std::max((int)(mnodeman.size() * 1.25), 3000);
 
     std::map<uint256, CMasternodePaymentWinner>::iterator it = mapMasternodePayeeVotes.begin();
     while (it != mapMasternodePayeeVotes.end()) {
@@ -855,25 +825,25 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
         //is budget payment block -- handled by the budgeting software
     } else {
         for (unsigned mnlevel = CMasternode::LevelValue::MIN; mnlevel <= CMasternode::LevelValue::MAX; ++mnlevel) {
-            CMasternodePaymentWinner newWinner{activeMasternode.vin};
+            CMasternodePaymentWinner newWinner(activeMasternode.vin);
 
             unsigned nCount = 0;
 
-            auto pmn = mnodeman.GetNextMasternodeInQueueForPayment(nBlockHeight, mnlevel, true, nCount);
+            CMasternode* pmn = mnodeman.GetNextMasternodeInQueueForPayment(nBlockHeight, mnlevel, true, nCount);
 
             if (!pmn) {
                 LogPrintf("CMasternodePayments::ProcessBlock() Failed to find masternode level %d to pay\n", mnlevel);
                 continue;
             }
 
-            auto payee = GetScriptForDestination(pmn->pubKeyCollateralAddress.GetID());
+            CScript payee = GetScriptForDestination(pmn->pubKeyCollateralAddress.GetID());
 
             newWinner.nBlockHeight = nBlockHeight;
             newWinner.AddPayee(payee, mnlevel);
 
             CTxDestination address1;
             ExtractDestination(payee, address1);
-            CBitcoinAddress address2{address1};
+            CBitcoinAddress address2(address1);
 
             LogPrintf("CMasternodePayments::ProcessBlock() Winner payee %s nHeight %d level %d. \n", address2.ToString().c_str(), newWinner.nBlockHeight, mnlevel);
 
@@ -905,6 +875,8 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
 
 void CMasternodePaymentWinner::Relay()
 {
+    LogPrint("mnpayments", "CMasternodePayments::Relay - %s\n", ToString().c_str());
+
     CInv inv(MSG_MASTERNODE_WINNER, GetHash());
     RelayInv(inv);
 }
@@ -915,7 +887,7 @@ bool CMasternodePaymentWinner::SignatureValid()
 
     if (pmn != NULL) {
         std::string strMessage = vinMasternode.prevout.ToStringShort() +
-                                 boost::lexical_cast<std::string>(nBlockHeight) +
+                                 std::to_string(nBlockHeight) +
                                  payee.ToString();
 
         std::string errorMessage = "";
@@ -936,7 +908,7 @@ void CMasternodePayments::Sync(CNode* node, int nCountNeeded)
     int nHeight;
     {
         TRY_LOCK(cs_main, locked);
-        if(!locked || !chainActive.Tip())
+        if (!locked || !chainActive.Tip())
             return;
 
         nHeight = chainActive.Tip()->nHeight;
@@ -945,7 +917,7 @@ void CMasternodePayments::Sync(CNode* node, int nCountNeeded)
     auto mn_counts = mnodeman.CountEnabledByLevels();
 
     for(auto& count : mn_counts)
-        count.second = std::min(nCountNeeded, count.second * 125 / 100);
+        count.second = std::min(nCountNeeded, (int)(count.second * 1.25));
 
     int nInvCount = 0;
 
