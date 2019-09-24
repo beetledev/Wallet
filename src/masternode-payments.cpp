@@ -299,7 +299,7 @@ bool IsBlockPayeeValid(const CBlock& block, int nBlockHeight)
 
         // If the Spork 8 is active I also check if is passed 1h from the node start
         // to prevent the prevent the block rejection when the mastermode list isn't complete at the node start.
-        if (IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) && GetTime()-startTime > 3600)
+        if (IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) /*&& GetTime()-startTime > 3600*/)
             return false;
 
         LogPrint("masternode","Masternode payment enforcement is disabled, accepting block\n");
@@ -472,7 +472,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         }
 
         std::string strError = "";
-        if (!winner.IsValid(pfrom, strError)) {
+        if (!winner.IsValid(pfrom, winner.payeeLevel, payee_addr, strError)) {
             if(strError != "") LogPrint("mnpayments", "mnw - invalid message from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), strError);
             return;
         }
@@ -744,7 +744,7 @@ void CMasternodePayments::CleanPaymentList()
     }
 }
 
-bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
+bool CMasternodePaymentWinner::IsValid(CNode* pnode, unsigned level, CBitcoinAddress payee, std::string& strError)
 {
     CMasternode* pmn = mnodeman.Find(vinMasternode);
 
@@ -757,6 +757,20 @@ bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
 
     if (pmn->protocolVersion < ActiveProtocol()) {
         strError = strprintf("Masternode protocol too old %d - req %d", pmn->protocolVersion, ActiveProtocol());
+        LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
+        return false;
+    }
+
+    CBitcoinAddress mnaddr(pmn->pubKeyCollateralAddress.GetID());
+
+    if (!(payee == mnaddr)) {
+        strError = strprintf("Masternode address mismatch: %s - %s", payee.ToString().c_str(), mnaddr.ToString().c_str());
+        LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
+        return false;
+    }
+
+    if (pmn->Level() != level) {
+        strError = strprintf("Masternode level mismatch: %d - %d", pmn->Level(), level);
         LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
         return false;
     }

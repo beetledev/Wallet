@@ -113,7 +113,7 @@ public:
         LOCK(cs_vecPayments);
 
         for (CMasternodePayee& payee : vecPayments) {
-            if (payee.scriptPubKey == payeeIn) {
+            if (payee.mnlevel == mnlevel && payee.scriptPubKey == payeeIn) {
                 payee.nVotes += nIncrement;
                 return;
             }
@@ -208,7 +208,7 @@ public:
     }
 
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
-    bool IsValid(CNode* pnode, std::string& strError);
+    bool IsValid(CNode* pnode, unsigned level, CBitcoinAddress payee, std::string& strError);
     bool SignatureValid();
     void Relay();
 
