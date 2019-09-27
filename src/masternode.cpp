@@ -122,10 +122,9 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
     pubKeyMasternode = mnb.pubKeyMasternode;
     sig = mnb.sig;
 
-    if (IsDepositCoins(mnb.vin, deposit))
+    if (IsDepositCoins(mnb.vin, deposit)) {
         activeState = MASTERNODE_ENABLED;
-    else
-    {
+    } else {
         deposit = 0u;
         activeState = MASTERNODE_REMOVE;
     }
@@ -136,6 +135,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
     cacheInputAgeBlock = 0;
     unitTest = false;
     allowFreeTx = true;
+    nActiveState = MASTERNODE_ENABLED,
     protocolVersion = mnb.protocolVersion;
     nLastDsq = mnb.nLastDsq;
     nScanningErrorCount = 0;
@@ -299,7 +299,7 @@ int64_t CMasternode::GetLastPaid()
 
     const CBlockIndex* BlockReading = pindexPrev;
 
-    int nMnCount = mnodeman.CountEnabled(Level()) * 125 / 100;
+    int nMnCount = mnodeman.CountEnabled(Level()) * 1.25;
     int n = 0;
     for (unsigned int i = 1; BlockReading && BlockReading->nHeight > 0; i++) {
         if (n >= nMnCount) {
@@ -344,6 +344,8 @@ std::string CMasternode::GetStatus()
         return "WATCHDOG_EXPIRED";
     case CMasternode::MASTERNODE_POSE_BAN:
         return "POSE_BAN";
+    case CMasternode::MASTERNODE_MISSING:
+        return "MISSING";
     default:
         return "UNKNOWN";
     }

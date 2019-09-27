@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The BeetleCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -71,7 +71,7 @@ bool CMasternodeDB::Write(const CMasternodeMan& mnodemanToSave)
     // Write and commit header, data
     try {
         fileout << ssMasternodes;
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         return error("%s : Serialize or I/O error - %s", __func__, e.what());
     }
     //    FileCommit(fileout);
@@ -108,7 +108,7 @@ CMasternodeDB::ReadResult CMasternodeDB::Read(CMasternodeMan& mnodemanToLoad, bo
     try {
         filein.read((char*)&vchData[0], dataSize);
         filein >> hashIn;
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         error("%s : Deserialize or I/O error - %s", __func__, e.what());
         return HashReadError;
     }
@@ -146,7 +146,7 @@ CMasternodeDB::ReadResult CMasternodeDB::Read(CMasternodeMan& mnodemanToLoad, bo
         }
         // de-serialize data into CMasternodeMan object
         ssMasternodes >> mnodemanToLoad;
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         mnodemanToLoad.Clear();
         error("%s : Deserialize or I/O error - %s", __func__, e.what());
         return IncorrectFormat;
@@ -217,7 +217,7 @@ CValidationState CMasternodeMan::GetInputCheckingTx(const CTxIn& vin, CMutableTr
     return state;
 }
 
-bool CMasternodeMan::Add(const CMasternode& mn)
+bool CMasternodeMan::Add(CMasternode& mn)
 {
     LOCK(cs);
 
