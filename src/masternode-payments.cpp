@@ -642,17 +642,8 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
         strPayeesPossible += std::to_string(payee.mnlevel) + ":" + CBitcoinAddress(address1).ToString() + "(" + std::to_string(payee.nVotes) + ")=" + FormatMoney(requiredMasternodePayment).c_str();
 
         if (payee.nVotes < MNPAYMENTS_SIGNATURES_REQUIRED || (!payNewTiers && payee.mnlevel != CMasternode::LevelValue::MAX)) {
-            LogPrint("mnpayments","CMasternodePayments::IsTransactionValid - Payment level %d found to %s vote=%d\n", payee.mnlevel, CBitcoinAddress(address1).ToString(), payee.nVotes);
-
-            auto it = max_signatures.find(payee.mnlevel);
-            if (it != max_signatures.end())
-                max_signatures.erase(payee.mnlevel);
-
-            if (max_signatures.size())
-                continue;
-
-            LogPrint("mnpayments","CMasternodePayments::IsTransactionValid - Payment accepted to %s\n", strPayeesPossible.c_str());
-            return true;
+            LogPrint("mnpayments","CMasternodePayments::IsTransactionValid - Payment level %d found to %s vote=%d **\n", payee.mnlevel, CBitcoinAddress(address1).ToString(), payee.nVotes);
+            continue;
         }
 
         auto payee_out = std::find_if(txNew.vout.cbegin(), txNew.vout.cend(), [&payee, &requiredMasternodePayment](const CTxOut& out){

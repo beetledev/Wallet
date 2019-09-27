@@ -113,7 +113,7 @@ public:
         LOCK(cs_vecPayments);
 
         for (CMasternodePayee& payee : vecPayments) {
-            if (payee.mnlevel == mnlevel && payee.scriptPubKey == payeeIn) {
+            if (payee.scriptPubKey == payeeIn) {
                 payee.nVotes += nIncrement;
                 return;
             }
