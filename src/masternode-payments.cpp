@@ -424,9 +424,12 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
 
         if (Params().NetworkID() == CBaseChainParams::MAIN) {
             if (pfrom->HasFulfilledRequest("mnget")) {
-                LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnget - peer already asked me for the list\n");
+                LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnget - peer=%i ip=%s already asked me for the list\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
                 Misbehaving(pfrom->GetId(), 20);
-                return;
+
+                // The old node ban at 20% and don't answer at the request, but the new node always ban at 20% but reply at the request
+                if( pfrom->nVersion < MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 )
+                    return;
             }
         }
 
@@ -434,7 +437,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         masternodePayments.Sync(pfrom, nCountNeeded);
         LogPrint("mnpayments", "mnget - Sent Masternode winners to peer %i\n", pfrom->GetId());
     } else if (strCommand == "mnw") { //Masternode Payments Declare Winner
-        //this is required in litemodef
+        //this is required in litemode
         CMasternodePaymentWinner winner;
         vRecv >> winner;
 
@@ -455,6 +458,10 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
 
         if (!winner_mn) {
             LogPrint("mnpayments", "mnw - unknown payee from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str());
+
+            // If I received an unknown payee I try to ask to the peer the updaded version of the masternode list
+            // however the DsegUpdate function do that only 1 time every 3h
+            mnodeman.DsegUpdate(pfrom);
             return;
         }
 
@@ -468,7 +475,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
 
         int nFirstBlock = nHeight - (mnodeman.CountEnabled(winner.payeeLevel) * 1.25);
         if (winner.nBlockHeight < nFirstBlock || winner.nBlockHeight > nHeight + 20) {
-            LogPrint("mnpayments", "mnw - winner out of range from peer=%s ip=%s - FirstBlock %d Height %d bestHeight %d\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), nFirstBlock, winner.nBlockHeight, nHeight);
+            LogPrint("mnpayments", "mnw - winner out of range from peer=%s ip=%s - Addr %s FirstBlock %d Height %d bestHeight %d\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str(), nFirstBlock, winner.nBlockHeight, nHeight);
             return;
         }
 
@@ -554,18 +561,23 @@ bool CMasternodePayments::IsScheduled(CMasternode& mn, int nSameLevelMNCount, in
 
     CScript mnpayee = GetScriptForDestination(mn.pubKeyCollateralAddress.GetID());
 
-    for(int64_t h_upper_bound = nHeight + 10, h = h_upper_bound - std::min(10, nSameLevelMNCount - 1); h < h_upper_bound; ++h) {
+    for(int64_t h = nHeight; h <= nHeight + 8; ++h) {
 
         if(h == nNotBlockHeight)
             continue;
 
-        if (mapMasternodeBlocks.count(h)) {
-            if (mapMasternodeBlocks[h].GetPayee(mn.Level(), mnpayee)) {
-                if (mnpayee == mnpayee) {
-                    return true;
-                }
-            }
-        }
+        auto block_payees = mapMasternodeBlocks.find(h);
+
+        if(block_payees == mapMasternodeBlocks.cend())
+            continue;
+
+        CScript payee;
+
+        if(!block_payees->second.GetPayee(mn.Level(), payee))
+            continue;
+
+        if(mnpayee == payee)
+            return true;
     }
 
     return false;
@@ -679,6 +691,32 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
         CTxDestination address1;
         ExtractDestination((*it).scriptPubKey, address1);
         LogPrint("mnpayments","    Address %s Value %s\n", CBitcoinAddress(address1).ToString(), FormatMoney((*it).nValue).c_str());
+    }
+
+    // If I haven't found the valid winners I try to ask to the other peers the list of updated masternode winners list using the "mnget" message
+    // this is done only if is passed at least 15min from the last attempt to prevent the flooding of the messages
+    // and only to the updated nodes, if I already asked the same before, or to all nodes that I haven't asked before
+    // to avoid to be banned from the old nodes. The new nodes permit that for max 5 times before the ban
+    static int64_t lastAttempt = 0;
+
+    if (GetTime()-lastAttempt > (60 * 15)) {
+        TRY_LOCK(cs_vNodes, lockRecv);
+
+        if (lockRecv) {
+            lastAttempt = GetTime();
+
+            for (CNode* pnode : vNodes) {
+                if( pnode->nVersion < MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && pnode->HasFulfilledRequest("mnget") )
+                    continue;
+
+                int needed = mnodeman.CountEnabled();
+
+                pnode->ClearFulfilledRequest("mnget");
+
+                LogPrint("mnpayments","Sending mnget: peer=%d ip=%s needed=%d\n", pnode->id, pnode->addr.ToString().c_str(), needed);
+                pnode->PushMessage("mnget", needed); //sync payees
+            }
+        }
     }
 
     return (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) ? false : true);
