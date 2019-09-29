@@ -454,7 +454,20 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         ExtractDestination(winner.payee, address1);
         CBitcoinAddress payee_addr(address1);
 
-        auto winner_mn = mnodeman.Find(winner.payee);
+        CMasternode* winner_mn;
+
+        // If the payeeVin is empty mean that winner object come from an old version, so I use the old logic
+        if (winner.payeeVin == CTxIn()) {
+            winner_mn = mnodeman.Find(winner.payee);
+
+            if (winner_mn != NULL)
+            {
+                winner.payeeLevel = winner_mn->Level();
+                winner.payeeVin = winner_mn->vin;
+            }
+        } else {
+            winner_mn = mnodeman.Find(winner.payeeVin);
+        }
 
         if (!winner_mn) {
             LogPrint("mnpayments", "mnw - unknown payee from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str());
@@ -465,17 +478,24 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             return;
         }
 
-        winner.payeeLevel = winner_mn->Level();
+        std::string logString = strprintf("mnw - peer=%s ip=%s v=%s addr=%s height=%d bestHeight=%d vin=%s",
+            pfrom->GetId(),
+            pfrom->addr.ToString().c_str(),
+            pfrom->nVersion,
+            payee_addr.ToString().c_str(),
+            winner.nBlockHeight,
+            nHeight,
+            winner.vinMasternode.prevout.ToStringShort() );
 
         if (masternodePayments.mapMasternodePayeeVotes.count(winner.GetHash())) {
-            LogPrint("mnpayments", "mnw - Already seen from peer=%s ip=%s - %s bestHeight %d\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), winner.GetHash().ToString().c_str(), nHeight);
+            LogPrint("mnpayments", "%s - already seen\n", logString.c_str());
             masternodeSync.AddedMasternodeWinner(winner.GetHash());
             return;
         }
 
         int nFirstBlock = nHeight - (mnodeman.CountEnabled(winner.payeeLevel) * 1.25);
         if (winner.nBlockHeight < nFirstBlock || winner.nBlockHeight > nHeight + 20) {
-            LogPrint("mnpayments", "mnw - winner out of range from peer=%s ip=%s - Addr %s FirstBlock %d Height %d bestHeight %d\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str(), nFirstBlock, winner.nBlockHeight, nHeight);
+            LogPrint("mnpayments", "%s - out of range\n", logString.c_str());
             return;
         }
 
@@ -486,7 +506,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         }
 
         if (!masternodePayments.CanVote(winner.vinMasternode.prevout, winner.nBlockHeight, winner.payeeLevel)) {
-            LogPrint("mnpayments", "mnw - masternode already voted from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), winner.vinMasternode.prevout.ToStringShort());
+            LogPrint("mnpayments", "%s - already voted\n", logString.c_str());
             return;
         }
 
@@ -500,7 +520,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             return;
         }
 
-        LogPrint("mnpayments", "mnw - winning vote from peer=%s ip=%s v=%s - Addr %s Height %d bestHeight %d - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), pfrom->nVersion, payee_addr.ToString().c_str(), winner.nBlockHeight, nHeight, winner.vinMasternode.prevout.ToStringShort());
+        LogPrint("mnpayments", "%s - winning vote\n", logString.c_str());
 
         if (masternodePayments.AddWinningMasternode(winner)) {
             winner.Relay();
@@ -606,7 +626,7 @@ bool CMasternodePayments::AddWinningMasternode(CMasternodePaymentWinner& winnerI
         }
     }
 
-    mapMasternodeBlocks[winnerIn.nBlockHeight].AddPayee(winnerIn.payeeLevel, winnerIn.payee, 1);
+    mapMasternodeBlocks[winnerIn.nBlockHeight].AddPayee(winnerIn.payeeLevel, winnerIn.payee, winnerIn.payeeVin, 1);
 
     return true;
 }
@@ -893,7 +913,7 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
             CScript payee = GetScriptForDestination(pmn->pubKeyCollateralAddress.GetID());
 
             newWinner.nBlockHeight = nBlockHeight;
-            newWinner.AddPayee(payee, mnlevel);
+            newWinner.AddPayee(payee, mnlevel, pmn->vin);
 
             CTxDestination address1;
             ExtractDestination(payee, address1);

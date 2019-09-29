@@ -63,19 +63,22 @@ class CMasternodePayee
 public:
     CScript scriptPubKey;
     unsigned mnlevel;
+    CTxIn vin;
     int nVotes;
 
     CMasternodePayee()
     {
         scriptPubKey = CScript();
         mnlevel = CMasternode::LevelValue::UNSPECIFIED;
+        vin = CTxIn();
         nVotes = 0;
     }
 
-    CMasternodePayee(unsigned mnlevelIn, const CScript payee, int nVotesIn)
+    CMasternodePayee(unsigned mnlevelIn, const CScript payee, CTxIn vinIn, int nVotesIn)
     {
         scriptPubKey = payee;
         mnlevel = mnlevelIn;
+        vin = vinIn;
         nVotes = nVotesIn;
     }
 
@@ -87,6 +90,7 @@ public:
         READWRITE(scriptPubKey);
         READWRITE(mnlevel);
         READWRITE(nVotes);
+        READWRITE(vin);
     }
 };
 
@@ -108,18 +112,18 @@ public:
         vecPayments.clear();
     }
 
-    void AddPayee(unsigned mnlevel, CScript payeeIn, int nIncrement)
+    void AddPayee(unsigned mnlevel, CScript payeeIn, CTxIn vinIn, int nIncrement)
     {
         LOCK(cs_vecPayments);
 
         for (CMasternodePayee& payee : vecPayments) {
-            if (payee.scriptPubKey == payeeIn) {
+            if (payee.scriptPubKey == payeeIn && payee.vin == vinIn) {
                 payee.nVotes += nIncrement;
                 return;
             }
         }
 
-        CMasternodePayee c(mnlevel, payeeIn, nIncrement);
+        CMasternodePayee c(mnlevel, payeeIn, vinIn, nIncrement);
         vecPayments.push_back(c);
     }
 
@@ -146,12 +150,12 @@ public:
         return true;
     }
 
-    bool HasPayeeWithVotes(CScript payee, int nVotesReq)
+    bool HasPayeeWithVotes(CScript payee, CTxIn vin, int nVotesReq)
     {
         LOCK(cs_vecPayments);
 
         for (CMasternodePayee& p : vecPayments) {
-            if (p.nVotes >= nVotesReq && p.scriptPubKey == payee) return true;
+            if (p.nVotes >= nVotesReq && p.scriptPubKey == payee && p.vin == vin) return true;
         }
 
         return false;
@@ -178,8 +182,10 @@ public:
 
     int nBlockHeight;
     CScript payee;
-    std::vector<unsigned char> vchSig;
     unsigned payeeLevel;
+    CTxIn payeeVin;
+
+    std::vector<unsigned char> vchSig;
 
     CMasternodePaymentWinner()
     {
@@ -187,6 +193,7 @@ public:
         vinMasternode = CTxIn();
         payee = CScript();
         payeeLevel = CMasternode::LevelValue::UNSPECIFIED;
+        payeeVin = CTxIn();
     }
 
     CMasternodePaymentWinner(CTxIn vinIn)
@@ -195,6 +202,7 @@ public:
         vinMasternode = vinIn;
         payee = CScript();
         payeeLevel = CMasternode::LevelValue::UNSPECIFIED;
+        payeeVin = CTxIn();
     }
 
     uint256 GetHash() const
@@ -203,6 +211,8 @@ public:
         ss << payee;
         ss << nBlockHeight;
         ss << vinMasternode.prevout;
+        ss << payeeLevel;
+        ss << payeeVin;
 
         return ss.GetHash();
     }
@@ -212,10 +222,11 @@ public:
     bool SignatureValid();
     void Relay();
 
-    void AddPayee(CScript payeeIn, unsigned payeeLevelIn)
+    void AddPayee(CScript payeeIn, unsigned payeeLevelIn, CTxIn payeeVinIn)
     {
         payee = payeeIn;
         payeeLevel = payeeLevelIn;
+        payeeVin = payeeVinIn;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -227,6 +238,12 @@ public:
         READWRITE(nBlockHeight);
         READWRITE(payee);
         READWRITE(vchSig);
+
+        if( nVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 )
+        {
+            READWRITE(payeeLevel);
+            READWRITE(payeeVin);
+        }
     }
 
     std::string ToString()
