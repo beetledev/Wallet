@@ -252,6 +252,7 @@ public:
         ret += vinMasternode.ToString();
         ret += ", " + std::to_string(nBlockHeight);
         ret += ", " + payee.ToString();
+        ret += ", " + std::to_string(payeeLevel);
         ret += ", " + std::to_string((int)vchSig.size());
         return ret;
     }
@@ -296,7 +297,7 @@ public:
 
     bool GetBlockPayee(int nBlockHeight, unsigned mnlevel, CScript& payee);
     bool IsTransactionValid(const CTransaction& txNew, int nBlockHeight);
-    bool IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight);
+    bool IsScheduled(CMasternode& mn, int nNotBlockHeight);
     bool CanVote(const COutPoint& outMasternode, int nBlockHeight, unsigned mnlevel)
     {
         LOCK(cs_mapMasternodePayeeVotes);

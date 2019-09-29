@@ -354,11 +354,12 @@ void CMasternodeSync::Process()
 
                 if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3) return;
 
-                CBlockIndex* pindexPrev = chainActive.Tip();
-                if (pindexPrev == NULL) return;
+                if (!chainActive.Tip())
+                    return;
 
-                int nMnCount = mnodeman.CountEnabled();
-                pnode->PushMessage("mnget", nMnCount); //sync payees
+                if(!mnodeman.WinnersUpdate(pnode))
+                    continue;
+
                 RequestedMasternodeAttempt++;
 
                 return;

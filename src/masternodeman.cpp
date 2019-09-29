@@ -1,5 +1,6 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2019 The PIVX developers
+// Copyright (c) 2017-2018 The XDNA Core developers
 // Copyright (c) 2018-2019 The BeetleCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -224,6 +225,9 @@ bool CMasternodeMan::Add(CMasternode& mn)
     if (!mn.IsEnabled())
         return false;
 
+    if (Find(mn.vin))
+        return false;
+
     CMasternode* pmn = Find(mn.vin);
     if (pmn == NULL) {
         LogPrint("masternode", "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.vin.prevout.hash.ToString(), size() + 1);
@@ -333,6 +337,26 @@ void CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
         }
     }
 
+    // check who's asked for the winner Masternode list
+    std::map<CNetAddr, int64_t>::iterator it5 = mAskedUsForWinnerMasternodeList.begin();
+    while (it5 != mAskedUsForWinnerMasternodeList.end()) {
+        if ((*it5).second < GetTime()) {
+            mAskedUsForWinnerMasternodeList.erase(it5++);
+        } else {
+            ++it5;
+        }
+    }
+
+    // check who we asked for the wineer Masternode list
+    it5 = mWeAskedForWinnerMasternodeList.begin();
+    while (it5 != mWeAskedForWinnerMasternodeList.end()) {
+        if ((*it5).second < GetTime()) {
+            mWeAskedForWinnerMasternodeList.erase(it5++);
+        } else {
+            ++it5;
+        }
+    }
+
     // remove expired mapSeenMasternodeBroadcast
     std::map<uint256, CMasternodeBroadcast>::iterator it3 = mapSeenMasternodeBroadcast.begin();
     while (it3 != mapSeenMasternodeBroadcast.end()) {
@@ -362,6 +386,8 @@ void CMasternodeMan::Clear()
     mAskedUsForMasternodeList.clear();
     mWeAskedForMasternodeList.clear();
     mWeAskedForMasternodeListEntry.clear();
+    mAskedUsForWinnerMasternodeList.clear();
+    mWeAskedForWinnerMasternodeList.clear();
     mapSeenMasternodeBroadcast.clear();
     mapSeenMasternodePing.clear();
     nDsqCount = 0;
@@ -502,6 +528,28 @@ bool CMasternodeMan::DsegUpdate(CNode* pnode)
     return true;
 }
 
+bool CMasternodeMan::WinnersUpdate(CNode* node)
+{
+    LOCK(cs);
+
+    if (Params().NetworkID() == CBaseChainParams::MAIN) {
+        if (!(node->addr.IsRFC1918() || node->addr.IsLocal())) {
+            std::map<CNetAddr, int64_t>::iterator it = mWeAskedForWinnerMasternodeList.find(node->addr);
+            if (it != mWeAskedForWinnerMasternodeList.end()) {
+                if (GetTime() < (*it).second) {
+                    LogPrint("masternode", "mnget - we already asked peer=%i ip=%s for the winners list; skipping...\n", node->GetId(), node->addr.ToString().c_str());
+                    return false;
+                }
+            }
+        }
+    }
+
+    node->PushMessage("mnget", CountEnabled());
+    int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
+    mWeAskedForWinnerMasternodeList[node->addr] = askAgain;
+    return true;
+}
+
 CMasternode* CMasternodeMan::Find(const CScript& payee)
 {
     LOCK(cs);
@@ -557,7 +605,6 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
 {
     LOCK(cs);
 
-    CMasternode* pBestMasternode = nullptr;
     std::vector<std::pair<int64_t, CTxIn> > vecMasternodeLastPaid;
 
     /*
@@ -580,7 +627,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
             continue;
 
         //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
-        if (masternodePayments.IsScheduled(mn, nMnCount, nBlockHeight))
+        if (masternodePayments.IsScheduled(mn, nBlockHeight))
             continue;
 
         //it's too new, wait for a cycle
@@ -606,21 +653,29 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     // Look at 1/10 of the oldest nodes (by last payment), calculate their scores and pay the best one
     //  -- This doesn't look at who is being paid in the scheduled blocks, allowing for double payments very rarely
 
-    int nTenthNetwork = nMnCount / 10;
-    int nCountTenth = 0;
+    int     nCountTenth = nMnCount / 10;
     uint256 nHigh = 0;
-    for (PAIRTYPE(int64_t, CTxIn) & s : vecMasternodeLastPaid) {
+
+    CMasternode* pBestMasternode = nullptr;
+
+    for(const auto& s : vecMasternodeLastPaid) {
+
         CMasternode* pmn = Find(s.second);
-        if (!pmn) continue;
+
+        if(!pmn)
+            continue;
 
         uint256 n = pmn->CalculateScore(1, nBlockHeight - 100);
-        if (n > nHigh) {
+
+        if(n > nHigh) {
             nHigh = n;
             pBestMasternode = pmn;
         }
-        nCountTenth++;
-        if (nCountTenth >= nTenthNetwork) break;
+
+        if(--nCountTenth > 0)
+            break;
     }
+
     return pBestMasternode;
 }
 
@@ -1178,12 +1233,36 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
             int nDoS = 0;
             if (state.IsInvalid(nDoS)) {
-                LogPrint("masternode","dsee - %s from %i %s was not accepted into the memory pool\n", tx.GetHash().ToString().c_str(),
-                    pfrom->GetId(), pfrom->cleanSubVer.c_str());
+                LogPrint("masternode","dsee - %s from %i %s was not accepted into the memory pool\n", tx.GetHash().ToString().c_str(), pfrom->GetId(), pfrom->cleanSubVer.c_str());
                 if (nDoS > 0)
                     Misbehaving(pfrom->GetId(), nDoS);
             }
         }
+    }
+
+    else if (strCommand == "mnget") { //Get winnign Masternode list
+
+        int nCountNeeded;
+        vRecv >> nCountNeeded;
+
+        bool isLocal = (pfrom->addr.IsRFC1918() || pfrom->addr.IsLocal());
+
+        if (!isLocal && Params().NetworkID() == CBaseChainParams::MAIN) {
+            std::map<CNetAddr, int64_t>::iterator i = mAskedUsForWinnerMasternodeList.find(pfrom->addr);
+            if (i != mAskedUsForWinnerMasternodeList.end()) {
+                int64_t t = (*i).second;
+                if (GetTime() < t) {
+                    Misbehaving(pfrom->GetId(), 34);
+                    LogPrintf("mnget - peer=%i ip=%s already asked me for the list\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
+                    return;
+                }
+            }
+            int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
+            mAskedUsForWinnerMasternodeList[pfrom->addr] = askAgain;
+        }
+
+        masternodePayments.Sync(pfrom, nCountNeeded);
+        LogPrint("mnpayments", "mnget - Sent Masternode winners to peer=%i ip=%s\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
     }
 
     else if (strCommand == "dseep") { //ObfuScation Election Entry Ping

@@ -474,17 +474,20 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
 
             // If I received an unknown payee I try to ask to the peer the updaded version of the masternode list
             // however the DsegUpdate function do that only 1 time every 3h
-            mnodeman.DsegUpdate(pfrom);
+            if (winner.payeeVin == CTxIn())
+                mnodeman.DsegUpdate(pfrom);
+            else
+                mnodeman.AskForMN(pfrom, winner.payeeVin);
+
             return;
         }
 
-        std::string logString = strprintf("mnw - peer=%s ip=%s v=%s addr=%s height=%d bestHeight=%d vin=%s",
+        std::string logString = strprintf("mnw - peer=%s ip=%s v=%d addr=%s winHeight=%d vin=%s",
             pfrom->GetId(),
             pfrom->addr.ToString().c_str(),
             pfrom->nVersion,
             payee_addr.ToString().c_str(),
             winner.nBlockHeight,
-            nHeight,
             winner.vinMasternode.prevout.ToStringShort() );
 
         if (masternodePayments.mapMasternodePayeeVotes.count(winner.GetHash())) {
@@ -560,7 +563,7 @@ bool CMasternodePayments::GetBlockPayee(int nBlockHeight, unsigned mnlevel, CScr
 
 // Is this masternode scheduled to get paid soon?
 // -- Only look ahead up to 8 blocks to allow for propagation of the latest 2 winners
-bool CMasternodePayments::IsScheduled(CMasternode& mn, int nSameLevelMNCount, int nNotBlockHeight)
+bool CMasternodePayments::IsScheduled(CMasternode& mn, int nNotBlockHeight)
 {
     LOCK(cs_mapMasternodeBlocks);
 
@@ -710,33 +713,13 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
     for (auto it = std::begin(txNew.vout); it != std::end(txNew.vout); ++it) {
         CTxDestination address1;
         ExtractDestination((*it).scriptPubKey, address1);
-        LogPrint("mnpayments","    Address %s Value %s\n", CBitcoinAddress(address1).ToString(), FormatMoney((*it).nValue).c_str());
+        LogPrint("mnpayments","CMasternodePayments::IsTransactionValid -     Address %s Value %s\n", CBitcoinAddress(address1).ToString(), FormatMoney((*it).nValue).c_str());
     }
 
-    // If I haven't found the valid winners I try to ask to the other peers the list of updated masternode winners list using the "mnget" message
-    // this is done only if is passed at least 15min from the last attempt to prevent the flooding of the messages
-    // and only to the updated nodes, if I already asked the same before, or to all nodes that I haven't asked before
-    // to avoid to be banned from the old nodes. The new nodes permit that for max 5 times before the ban
-    static int64_t lastAttempt = 0;
-
-    if (GetTime()-lastAttempt > (60 * 15)) {
-        TRY_LOCK(cs_vNodes, lockRecv);
-
-        if (lockRecv) {
-            lastAttempt = GetTime();
-
-            for (CNode* pnode : vNodes) {
-                if( pnode->nVersion < MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && pnode->HasFulfilledRequest("mnget") )
-                    continue;
-
-                int needed = mnodeman.CountEnabled();
-
-                pnode->ClearFulfilledRequest("mnget");
-
-                LogPrint("mnpayments","Sending mnget: peer=%d ip=%s needed=%d\n", pnode->id, pnode->addr.ToString().c_str(), needed);
-                pnode->PushMessage("mnget", needed); //sync payees
-            }
-        }
+    // If I haven't found the valid winners I try to ask to the other peers the list of updated masternode winners list
+    for (CNode* pnode : vNodes) {
+        if(mnodeman.WinnersUpdate(pnode))
+            LogPrint("mnpayments","Sending mnget: peer=%d ip=%s v=%d\n", pnode->id, pnode->addr.ToString().c_str(), pnode->nVersion);
     }
 
     return (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) ? false : true);
