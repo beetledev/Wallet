@@ -6527,8 +6527,14 @@ bool ProcessMessages(CNode* pfrom)
             PrintExceptionContinue(NULL, "ProcessMessages()");
         }
 
-        if (!fRet)
-            LogPrintf("ProcessMessage(%s, %u bytes) FAILED peer=%d\n", SanitizeString(strCommand), nMessageSize, pfrom->id);
+        if (!fRet) {
+            LogPrintf("ProcessMessage(%s, %u bytes) FAILED peer=%d ip=%s\n", SanitizeString(strCommand), nMessageSize, pfrom->id, pfrom->addr.ToString().c_str());
+
+            if (pfrom->nVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && strCommand == "mnw") {
+                // Ban after 5 times
+                Misbehaving(pnode->GetId(), 20);
+            }
+        }
 
         break;
     }
