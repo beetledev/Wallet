@@ -453,7 +453,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             LogPrint("mnpayments", "mnw - unknown payee from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str());
 
             // Ban after 50 times times
-            Misbehaving(pnode->GetId(), 2);
+            Misbehaving(pfrom->GetId(), 2);
 
             // If I received an unknown payee I try to ask to the peer the updaded version of the masternode list
             // however the DsegUpdate function do that only 1 time every 3h
@@ -484,7 +484,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             LogPrint("mnpayments", "%s - out of range\n", logString.c_str());
 
             // Ban after 20 times
-            Misbehaving(pnode->GetId(), 5);
+            Misbehaving(pfrom->GetId(), 5);
             return;
         }
 
@@ -498,7 +498,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             LogPrint("mnpayments", "%s - already voted\n", logString.c_str());
 
             // Ban after 5 times
-            Misbehaving(pnode->GetId(), 20);
+            Misbehaving(pfrom->GetId(), 20);
             return;
         }
 

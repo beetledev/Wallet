@@ -6532,7 +6532,7 @@ bool ProcessMessages(CNode* pfrom)
 
             if (pfrom->nVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && strCommand == "mnw") {
                 // Ban after 5 times
-                Misbehaving(pnode->GetId(), 20);
+                Misbehaving(pfrom->GetId(), 20);
             }
         }
 
