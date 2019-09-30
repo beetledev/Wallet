@@ -602,6 +602,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
 {
     LOCK(cs);
 
+    CMasternode* pBestMasternode = nullptr;
     std::vector<std::pair<int64_t, CTxIn> > vecMasternodeLastPaid;
 
     /*
@@ -650,29 +651,21 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     // Look at 1/10 of the oldest nodes (by last payment), calculate their scores and pay the best one
     //  -- This doesn't look at who is being paid in the scheduled blocks, allowing for double payments very rarely
 
-    int     nCountTenth = nMnCount / 10;
+    int nTenthNetwork = nMnCount / 10;
+    int nCountTenth = 0;
     uint256 nHigh = 0;
-
-    CMasternode* pBestMasternode = nullptr;
-
-    for(const auto& s : vecMasternodeLastPaid) {
-
+    for (PAIRTYPE(int64_t, CTxIn) & s : vecMasternodeLastPaid) {
         CMasternode* pmn = Find(s.second);
-
-        if(!pmn)
-            continue;
+        if (!pmn) continue;
 
         uint256 n = pmn->CalculateScore(1, nBlockHeight - 100);
-
-        if(n > nHigh) {
+        if (n > nHigh) {
             nHigh = n;
             pBestMasternode = pmn;
         }
-
-        if(--nCountTenth > 0)
-            break;
+        nCountTenth++;
+        if (nCountTenth >= nTenthNetwork) break;
     }
-
     return pBestMasternode;
 }
 
@@ -1003,19 +996,17 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             if (mn.addr.IsRFC1918()) continue; //local network
 
             if (mn.IsEnabled()) {
+                LogPrint("masternode", "dseg - Sending Masternode entry - %s \n", mn.vin.prevout.hash.ToString());
                 if (vin == CTxIn() || vin == mn.vin) {
-                    LogPrint("masternode", "dseg - Sending Masternode entry to peer=%i ip=%s - %s \n", pfrom->GetId(), pfrom->addr.ToString().c_str(), mn.vin.prevout.hash.ToString());
-
                     CMasternodeBroadcast mnb = CMasternodeBroadcast(mn);
                     uint256 hash = mnb.GetHash();
                     pfrom->PushInventory(CInv(MSG_MASTERNODE_ANNOUNCE, hash));
                     nInvCount++;
 
-                    if (!mapSeenMasternodeBroadcast.count(hash)) {
-                        mapSeenMasternodeBroadcast.insert(std::make_pair(hash, mnb));
-                    }
+                    if (!mapSeenMasternodeBroadcast.count(hash)) mapSeenMasternodeBroadcast.insert(std::make_pair(hash, mnb));
 
                     if (vin == mn.vin) {
+                        LogPrint("masternode", "dseg - Sent 1 Masternode entry to peer %i\n", pfrom->GetId());
                         return;
                     }
                 }

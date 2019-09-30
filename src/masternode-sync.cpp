@@ -52,8 +52,8 @@ bool CMasternodeSync::IsBlockchainSynced()
     CBlockIndex* pindex = chainActive.Tip();
     if (pindex == NULL) return false;
 
-    // if the last block is over 60 minutes old, we are not synced
-    if (pindex->nTime + 60 * 60 < GetTime())
+    // if the last block is over 12 hours old, we are not synced
+    if (pindex->nTime + 12 * 60 * 60 < GetTime())
         return false;
 
     fBlockchainSynced = true;
@@ -354,12 +354,9 @@ void CMasternodeSync::Process()
 
                 if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3) return;
 
-                if (!chainActive.Tip())
-                    return;
+                if (!chainActive.Tip()) return;
 
-                if(!mnodeman.WinnersUpdate(pnode))
-                    continue;
-
+                if (!mnodeman.WinnersUpdate(pnode)) continue;
                 RequestedMasternodeAttempt++;
 
                 return;

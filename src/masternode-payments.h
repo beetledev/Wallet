@@ -131,9 +131,9 @@ public:
     {
         LOCK(cs_vecPayments);
 
-        auto payment = vecPayments.cend();
+        std::vector<CMasternodePayee>::const_iterator payment = vecPayments.cend();
 
-        for (auto p = vecPayments.cbegin(), e = vecPayments.cend(); p != e; ++p) {
+        for (std::vector<CMasternodePayee>::const_iterator p = vecPayments.cbegin(), e = vecPayments.cend(); p != e; ++p) {
 
             if (p->mnlevel != mnlevel)
                 continue;
@@ -251,8 +251,7 @@ public:
         std::string ret = "";
         ret += vinMasternode.ToString();
         ret += ", " + std::to_string(nBlockHeight);
-        ret += ", " + payee.ToString();
-        ret += ", " + std::to_string(payeeLevel);
+        ret += ", " + std::to_string(payeeLevel) + ":" + payee.ToString();
         ret += ", " + std::to_string((int)vchSig.size());
         return ret;
     }
