@@ -1240,7 +1240,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         }
     }
 
-    else if (strCommand == "mnget") { //Get winnign Masternode list
+    else if (strCommand == "mnget") { //Get winning Masternode list
 
         int nCountNeeded;
         vRecv >> nCountNeeded;

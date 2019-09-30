@@ -416,27 +416,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
 
     if (fLiteMode) return; //disable all Obfuscation/Masternode related functionality
 
-    if (strCommand == "mnget") { //Masternode Payments Request Sync
-        if (fLiteMode) return;   //disable all Obfuscation/Masternode related functionality
-
-        int nCountNeeded;
-        vRecv >> nCountNeeded;
-
-        if (Params().NetworkID() == CBaseChainParams::MAIN) {
-            if (pfrom->HasFulfilledRequest("mnget")) {
-                LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnget - peer=%i ip=%s already asked me for the list\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
-                Misbehaving(pfrom->GetId(), 20);
-
-                // The old node ban at 20% and don't answer at the request, but the new node always ban at 20% but reply at the request
-                if( pfrom->nVersion < MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 )
-                    return;
-            }
-        }
-
-        pfrom->FulfilledRequest("mnget");
-        masternodePayments.Sync(pfrom, nCountNeeded);
-        LogPrint("mnpayments", "mnget - Sent Masternode winners to peer %i\n", pfrom->GetId());
-    } else if (strCommand == "mnw") { //Masternode Payments Declare Winner
+    if (strCommand == "mnw") { //Masternode Payments Declare Winner
         //this is required in litemode
         CMasternodePaymentWinner winner;
         vRecv >> winner;
