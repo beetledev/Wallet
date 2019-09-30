@@ -14,20 +14,18 @@
 #include "timedata.h"
 #include "util.h"
 
-#define MASTERNODE_MIN_CONFIRMATIONS 15
-#define MASTERNODE_MIN_MNP_SECONDS (10 * 60)
-#define MASTERNODE_MIN_MNB_SECONDS (5 * 60)
-#define MASTERNODE_PING_SECONDS (5 * 60)
-#define MASTERNODE_EXPIRATION_SECONDS (120 * 60)
-#define MASTERNODE_REMOVAL_SECONDS (130 * 60)
-#define MASTERNODE_CHECK_SECONDS 5
-
-using namespace std;
+#define MASTERNODE_MIN_CONFIRMATIONS    15
+#define MASTERNODE_MIN_MNP_SECONDS      (10 * 60)
+#define MASTERNODE_MIN_MNB_SECONDS      (5 * 60)
+#define MASTERNODE_PING_SECONDS         (5 * 60)
+#define MASTERNODE_EXPIRATION_SECONDS   (120 * 60)
+#define MASTERNODE_REMOVAL_SECONDS      (130 * 60)
+#define MASTERNODE_CHECK_SECONDS        5
 
 class CMasternode;
 class CMasternodeBroadcast;
 class CMasternodePing;
-extern map<int64_t, uint256> mapCacheBlockHashes;
+extern std::map<int64_t, uint256> mapCacheBlockHashes;
 
 bool GetBlockHash(uint256& hash, int nBlockHeight);
 
@@ -101,7 +99,7 @@ public:
 };
 
 //
-// The Masternode Class. For managing the Obfuscation process. It contains the input of the 10000 BEETLECOIN, signature to prove
+// The Masternode Class. For managing the Obfuscation process. It contains the input of the 10000 BEET, signature to prove
 // it's the one who own that ip address and code for calculating the payment election.
 //
 class CMasternode
@@ -121,7 +119,8 @@ public:
         MASTERNODE_WATCHDOG_EXPIRED,
         MASTERNODE_POSE_BAN,
         MASTERNODE_VIN_SPENT,
-        MASTERNODE_POS_ERROR
+        MASTERNODE_POS_ERROR,
+        MASTERNODE_MISSING
     };
 
     enum LevelValue : unsigned {
@@ -145,7 +144,6 @@ public:
     bool unitTest;
     bool allowFreeTx;
     int protocolVersion;
-    int nActiveState;
     int64_t nLastDsq; //the dsq count from the last dsq broadcast of this node
     int nScanningErrorCount;
     int nLastScanningErrorBlockHeight;
@@ -263,7 +261,7 @@ public:
         lastPing = CMasternodePing();
     }
 
-    bool IsEnabled() const
+    bool IsEnabled()
     {
         return activeState == MASTERNODE_ENABLED;
     }
@@ -289,11 +287,15 @@ public:
     {
         std::string strStatus = "ACTIVE";
 
-        if (activeState == CMasternode::MASTERNODE_ENABLED) strStatus = "ENABLED";
-        if (activeState == CMasternode::MASTERNODE_EXPIRED) strStatus = "EXPIRED";
-        if (activeState == CMasternode::MASTERNODE_VIN_SPENT) strStatus = "VIN_SPENT";
-        if (activeState == CMasternode::MASTERNODE_REMOVE) strStatus = "REMOVE";
-        if (activeState == CMasternode::MASTERNODE_POS_ERROR) strStatus = "POS_ERROR";
+        switch(activeState)
+        {
+            case CMasternode::MASTERNODE_ENABLED:   strStatus = "ENABLED";   break;
+            case CMasternode::MASTERNODE_EXPIRED:   strStatus = "EXPIRED";   break;
+            case CMasternode::MASTERNODE_VIN_SPENT: strStatus = "VIN_SPENT"; break;
+            case CMasternode::MASTERNODE_REMOVE:    strStatus = "REMOVE";    break;
+            case CMasternode::MASTERNODE_POS_ERROR: strStatus = "POS_ERROR"; break;
+            case CMasternode::MASTERNODE_MISSING:   strStatus = "MISSING";   break;
+        }
 
         return strStatus;
     }
