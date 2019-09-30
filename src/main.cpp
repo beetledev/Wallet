@@ -6513,6 +6513,11 @@ bool ProcessMessages(CNode* pfrom)
             if (strstr(e.what(), "end of data")) {
                 // Allow exceptions from under-length message on vRecv
                 LogPrintf("ProcessMessages(%s, %u bytes): Exception '%s' caught, normally caused by a message being shorter than its stated length\n", SanitizeString(strCommand), nMessageSize, e.what());
+
+                if (pfrom->nVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && strCommand == "mnw") {
+                    // Ban after 5 times
+                    Misbehaving(pfrom->GetId(), 20);
+                }
             } else if (strstr(e.what(), "size too large")) {
                 // Allow exceptions from over-long size
                 LogPrintf("ProcessMessages(%s, %u bytes): Exception '%s' caught\n", SanitizeString(strCommand), nMessageSize, e.what());
@@ -6527,14 +6532,8 @@ bool ProcessMessages(CNode* pfrom)
             PrintExceptionContinue(NULL, "ProcessMessages()");
         }
 
-        if (!fRet) {
+        if (!fRet)
             LogPrintf("ProcessMessage(%s, %u bytes) FAILED peer=%d ip=%s\n", SanitizeString(strCommand), nMessageSize, pfrom->id, pfrom->addr.ToString().c_str());
-
-            if (pfrom->nVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && strCommand == "mnw") {
-                // Ban after 5 times
-                Misbehaving(pfrom->GetId(), 20);
-            }
-        }
 
         break;
     }
