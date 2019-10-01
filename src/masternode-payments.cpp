@@ -452,8 +452,8 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         if (!winner_mn) {
             LogPrint("mnpayments", "mnw - unknown payee from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str());
 
-            // Ban after 50 times times
-            Misbehaving(pfrom->GetId(), 2);
+            // // Ban after 50 times times
+            // Misbehaving(pfrom->GetId(), 2);
 
             // If I received an unknown payee I try to ask to the peer the updaded version of the masternode list
             // however the DsegUpdate function do that only 1 time every 3h
