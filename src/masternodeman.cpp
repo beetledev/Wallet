@@ -527,7 +527,8 @@ bool CMasternodeMan::DsegUpdate(CNode* pnode)
 
 bool CMasternodeMan::WinnersUpdate(CNode* node)
 {
-    LOCK(cs);
+    TRY_LOCK(cs, locked);
+    if (!locked) return false;
 
     if (Params().NetworkID() == CBaseChainParams::MAIN) {
         if (!(node->addr.IsRFC1918() || node->addr.IsLocal())) {
@@ -544,6 +545,7 @@ bool CMasternodeMan::WinnersUpdate(CNode* node)
     node->PushMessage("mnget", CountEnabled());
     int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
     mWeAskedForWinnerMasternodeList[node->addr] = askAgain;
+
     return true;
 }
 
@@ -980,7 +982,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
                     int64_t t = (*i).second;
                     if (GetTime() < t) {
                         LogPrintf("CMasternodeMan::ProcessMessage() : dseg - peer already asked me for the list\n");
-                        Misbehaving(pfrom->GetId(), 34);
+                        TRY_LOCK(cs_main, locked);
+                        if (locked) Misbehaving(pfrom->GetId(), 34);
                         return;
                     }
                 }
@@ -996,8 +999,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             if (mn.addr.IsRFC1918()) continue; //local network
 
             if (mn.IsEnabled()) {
-                LogPrint("masternode", "dseg - Sending Masternode entry - %s \n", mn.vin.prevout.hash.ToString());
+                LogPrint("masternode", "dseg - Sending Masternode entry to peer=%i ip=%s - %s \n", pfrom->GetId(), pfrom->addr.ToString().c_str(), mn.vin.prevout.hash.ToString());
                 if (vin == CTxIn() || vin == mn.vin) {
+
                     CMasternodeBroadcast mnb = CMasternodeBroadcast(mn);
                     uint256 hash = mnb.GetHash();
                     pfrom->PushInventory(CInv(MSG_MASTERNODE_ANNOUNCE, hash));
@@ -1058,7 +1062,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
         if (protocolVersion < masternodePayments.GetMinMasternodePaymentsProto()) {
             LogPrintf("CMasternodeMan::ProcessMessage() : dsee - ignoring outdated Masternode %s protocol version %d < %d\n", vin.prevout.hash.ToString(), protocolVersion, masternodePayments.GetMinMasternodePaymentsProto());
-            Misbehaving(pfrom->GetId(), 1);
+            TRY_LOCK(cs_main, locked);
+            if (locked) Misbehaving(pfrom->GetId(), 1);
             return;
         }
 
@@ -1067,7 +1072,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
         if (pubkeyScript.size() != 25) {
             LogPrintf("CMasternodeMan::ProcessMessage() : dsee - pubkey the wrong size\n");
-            Misbehaving(pfrom->GetId(), 100);
+            TRY_LOCK(cs_main, locked);
+            if (locked) Misbehaving(pfrom->GetId(), 100);
             return;
         }
 
@@ -1076,20 +1082,23 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
         if (pubkeyScript2.size() != 25) {
             LogPrintf("CMasternodeMan::ProcessMessage() : dsee - pubkey2 the wrong size\n");
-            Misbehaving(pfrom->GetId(), 100);
+            TRY_LOCK(cs_main, locked);
+            if (locked) Misbehaving(pfrom->GetId(), 100);
             return;
         }
 
         if (!vin.scriptSig.empty()) {
             LogPrintf("CMasternodeMan::ProcessMessage() : dsee - Ignore Not Empty ScriptSig %s\n", vin.prevout.hash.ToString());
-            Misbehaving(pfrom->GetId(), 100);
+            TRY_LOCK(cs_main, locked);
+            if (locked) Misbehaving(pfrom->GetId(), 100);
             return;
         }
 
         std::string errorMessage = "";
         if (!obfuScationSigner.VerifyMessage(pubkey, vchSig, strMessage, errorMessage)) {
             LogPrintf("CMasternodeMan::ProcessMessage() : dsee - Got bad Masternode address signature\n");
-            Misbehaving(pfrom->GetId(), 100);
+            TRY_LOCK(cs_main, locked);
+            if (locked) Misbehaving(pfrom->GetId(), 100);
             return;
         }
 
@@ -1143,10 +1152,10 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         //  - this is expensive, so it's only done once per Masternode
         if (!obfuScationSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
             LogPrintf("CMasternodeMan::ProcessMessage() : dsee - Got mismatched pubkey and vin\n");
-            Misbehaving(pfrom->GetId(), 100);
+            TRY_LOCK(cs_main, locked);
+            if (locked) Misbehaving(pfrom->GetId(), 100);
             return;
         }
-
 
         LogPrint("masternode", "dsee - Got NEW OLD Masternode entry %s\n", vin.prevout.hash.ToString());
 
@@ -1169,7 +1178,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         if (fAcceptable) {
             if (GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS) {
                 LogPrintf("CMasternodeMan::ProcessMessage() : dsee - Input must have least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
-                Misbehaving(pfrom->GetId(), 20);
+                TRY_LOCK(cs_main, locked);
+                if (locked) Misbehaving(pfrom->GetId(), 20);
                 return;
             }
 
@@ -1222,8 +1232,10 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             int nDoS = 0;
             if (state.IsInvalid(nDoS)) {
                 LogPrint("masternode","dsee - %s from %i %s was not accepted into the memory pool\n", tx.GetHash().ToString().c_str(), pfrom->GetId(), pfrom->cleanSubVer.c_str());
-                if (nDoS > 0)
-                    Misbehaving(pfrom->GetId(), nDoS);
+                if (nDoS > 0) {
+                    TRY_LOCK(cs_main, locked);
+                    if (locked) Misbehaving(pfrom->GetId(), nDoS);
+                }
             }
         }
     }
@@ -1234,24 +1246,30 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         int nCountNeeded;
         vRecv >> nCountNeeded;
 
-        bool isLocal = (pfrom->addr.IsRFC1918() || pfrom->addr.IsLocal());
+        {
+            TRY_LOCK(cs, locked1);
+            if (!locked1) return;
 
-        if (!isLocal && Params().NetworkID() == CBaseChainParams::MAIN) {
-            std::map<CNetAddr, int64_t>::iterator i = mAskedUsForWinnerMasternodeList.find(pfrom->addr);
-            if (i != mAskedUsForWinnerMasternodeList.end()) {
-                int64_t t = (*i).second;
-                if (GetTime() < t) {
-                    Misbehaving(pfrom->GetId(), 34);
-                    LogPrintf("mnget - peer=%i ip=%s already asked me for the list\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
-                    return;
+            bool isLocal = (pfrom->addr.IsRFC1918() || pfrom->addr.IsLocal());
+
+            if (!isLocal && Params().NetworkID() == CBaseChainParams::MAIN) {
+                std::map<CNetAddr, int64_t>::iterator i = mAskedUsForWinnerMasternodeList.find(pfrom->addr);
+                if (i != mAskedUsForWinnerMasternodeList.end()) {
+                    int64_t t = (*i).second;
+                    if (GetTime() < t) {
+                        LogPrintf("mnget - peer=%i ip=%s already asked me for the list\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
+                        TRY_LOCK(cs_main, locked2);
+                        if (locked2) Misbehaving(pfrom->GetId(), 34);
+                        return;
+                    }
                 }
+                int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
+                mAskedUsForWinnerMasternodeList[pfrom->addr] = askAgain;
             }
-            int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
-            mAskedUsForWinnerMasternodeList[pfrom->addr] = askAgain;
-        }
 
-        masternodePayments.Sync(pfrom, nCountNeeded);
-        LogPrint("mnpayments", "mnget - Sent Masternode winners to peer=%i ip=%s\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
+            masternodePayments.Sync(pfrom, nCountNeeded);
+            LogPrint("mnpayments", "mnget - Sent Masternode winners to peer=%i ip=%s\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
+        }
     }
 
     else if (strCommand == "dseep") { //ObfuScation Election Entry Ping

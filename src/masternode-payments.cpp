@@ -453,7 +453,8 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             LogPrint("mnpayments", "mnw - unknown payee from peer=%s ip=%s - %s\n", pfrom->GetId(), pfrom->addr.ToString().c_str(), payee_addr.ToString().c_str());
 
             // // Ban after 50 times times
-            // Misbehaving(pfrom->GetId(), 2);
+            // TRY_LOCK(cs_main, locked);
+            // if (locked) Misbehaving(pfrom->GetId(), 2);
 
             // If I received an unknown payee I try to ask to the peer the updaded version of the masternode list
             // however the DsegUpdate function do that only 1 time every 3h
@@ -483,8 +484,9 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         if (winner.nBlockHeight < nFirstBlock || winner.nBlockHeight > nHeight + 20) {
             LogPrint("mnpayments", "%s - out of range\n", logString.c_str());
 
-            // Ban after 20 times
-            Misbehaving(pfrom->GetId(), 5);
+            // // Ban after 100 times
+            // TRY_LOCK(cs_main, locked);
+            // if (locked) Misbehaving(pfrom->GetId(), 1);
             return;
         }
 
@@ -497,8 +499,9 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         if (!masternodePayments.CanVote(winner.vinMasternode.prevout, winner.nBlockHeight, winner.payeeLevel)) {
             LogPrint("mnpayments", "%s - already voted\n", logString.c_str());
 
-            // Ban after 5 times
-            Misbehaving(pfrom->GetId(), 20);
+            // Ban after 50 times
+            TRY_LOCK(cs_main, locked);
+            if (locked) Misbehaving(pfrom->GetId(), 2);
             return;
         }
 
@@ -507,7 +510,8 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
                 LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnw - invalid signature from peer=%s ip=%s\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
 
                 // Ban after 5 times
-                Misbehaving(pfrom->GetId(), 20);
+                TRY_LOCK(cs_main, locked);
+                if (locked) Misbehaving(pfrom->GetId(), 20);
             }
             // it could just be a non-synced masternode
             mnodeman.AskForMN(pfrom, winner.vinMasternode);
@@ -794,8 +798,9 @@ bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
         LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
         mnodeman.AskForMN(pnode, vinMasternode);
 
-        // Ban after 5 times
-        Misbehaving(pnode->GetId(), 20);
+        // Ban after 50 times
+        TRY_LOCK(cs_main, locked);
+        if (locked) Misbehaving(pnode->GetId(), 2);
         return false;
     }
 
@@ -820,8 +825,10 @@ bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
             strError = strprintf("Masternode not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL * 2, n);
             LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
 
-            if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && masternodeSync.IsSynced())
-                Misbehaving(pnode->GetId(), 20);
+            if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && masternodeSync.IsSynced()) {
+                TRY_LOCK(cs_main, locked);
+                if (locked) Misbehaving(pnode->GetId(), 20);
+            }
         }
         return false;
     }

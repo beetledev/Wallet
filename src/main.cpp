@@ -1053,7 +1053,7 @@ bool ContextualCheckZerocoinSpendNoSerialCheck(const CTransaction& tx, const lib
         try {
             if (!spend.HasValidSignature())
                 return error("%s: V2 zBEET spend does not have a valid signature\n", __func__);
-        } catch (const libzerocoin::InvalidSerialException &e) {
+        } catch (libzerocoin::InvalidSerialException &e) {
             return error("%s: Invalid serial detected, txid %s, in block %d\n", __func__, tx.GetHash().GetHex(), pindex->nHeight);
         }
 
@@ -1786,7 +1786,7 @@ bool GetTransaction(const uint256& hash, CTransaction& txOut, uint256& hashBlock
                     file >> header;
                     fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
                     file >> txOut;
-                } catch (const std::exception& e) {
+                } catch (std::exception& e) {
                     return error("%s : Deserialize or I/O error - %s", __func__, e.what());
                 }
                 hashBlock = header.GetHash();
@@ -1867,7 +1867,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)
     // Read block
     try {
         filein >> block;
-    } catch (const std::exception& e) {
+    } catch (std::exception& e) {
         return error("%s : Deserialize or I/O error - %s", __func__, e.what());
     }
 
@@ -3167,7 +3167,7 @@ bool static FlushStateToDisk(CValidationState& state, FlushStateMode mode)
             }
             nLastWrite = GetTimeMicros();
         }
-    } catch (const std::runtime_error& e) {
+    } catch (std::runtime_error& e) {
         return state.Abort(std::string("System error while flushing: ") + e.what());
     }
     return true;
@@ -4381,7 +4381,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
                 return state.Abort("Failed to write block");
         if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
             return error("AcceptBlock() : ReceivedBlockTransactions failed");
-    } catch (const std::runtime_error& e) {
+    } catch (std::runtime_error& e) {
         return state.Abort(std::string("System error: ") + e.what());
     }
 
@@ -4898,7 +4898,7 @@ bool InitBlockIndex()
                 return error("LoadBlockIndex() : genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesnt check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
-        } catch (const std::runtime_error& e) {
+        } catch (std::runtime_error& e) {
             return error("LoadBlockIndex() : failed to initialize block database: %s", e.what());
         }
     }
@@ -4937,7 +4937,7 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos* dbp)
                 blkdat >> nSize;
                 if (nSize < 80 || nSize > MAX_BLOCK_SIZE_CURRENT)
                     continue;
-            } catch (const std::exception&) {
+            } catch (std::exception&) {
                 // no valid block header found; don't complain
                 break;
             }
@@ -4995,11 +4995,11 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos* dbp)
                         mapBlocksUnknownParent.erase(it);
                     }
                 }
-            } catch (const std::exception& e) {
+            } catch (std::exception& e) {
                 LogPrintf("%s : Deserialize or I/O error - %s", __func__, e.what());
             }
         }
-    } catch (const std::runtime_error& e) {
+    } catch (std::runtime_error& e) {
         AbortNode(std::string("System error: ") + e.what());
     }
     if (nLoaded > 0)
@@ -6386,7 +6386,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     ss << ": hash " << hash.ToString();
                 }
                 LogPrint("net", "Reject %s\n", SanitizeString(ss.str()));
-            } catch (const std::ios_base::failure& e) {
+            } catch (std::ios_base::failure& e) {
                 // Avoid feedback loops by preventing reject messages from triggering a new reject message.
                 LogPrint("net", "Unparseable reject message received\n");
             }
@@ -6516,7 +6516,8 @@ bool ProcessMessages(CNode* pfrom)
 
                 if (pfrom->nVersion >= MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_4 && strCommand == "mnw") {
                     // Ban after 5 times
-                    Misbehaving(pfrom->GetId(), 20);
+                    TRY_LOCK(cs_main, locked);
+                    if (locked) Misbehaving(pfrom->GetId(), 20);
                 }
             } else if (strstr(e.what(), "size too large")) {
                 // Allow exceptions from over-long size
@@ -6812,7 +6813,7 @@ bool CBlockUndo::ReadFromDisk(const CDiskBlockPos& pos, const uint256& hashBlock
     try {
         filein >> *this;
         filein >> hashChecksum;
-    } catch (const std::exception& e) {
+    } catch (std::exception& e) {
         return error("%s : Deserialize or I/O error - %s", __func__, e.what());
     }
 
