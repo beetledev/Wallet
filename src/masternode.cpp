@@ -915,11 +915,11 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fChec
             Relay();
             return true;
         }
-        LogPrint("masternode", "CMasternodePing::CheckAndUpdate - Masternode ping arrived too early, vin: %s\n", vin.prevout.hash.ToString());
+        LogPrint("masternode", "CMasternodePing::CheckAndUpdate - Masternode ping arrived too early, vin: %s - %s - %lli\n", vin.prevout.hash.ToString(), blockHash.ToString(), sigTime);
         //nDos = 1; //disable, this is happening frequently and causing banned peers
         return false;
     }
-    LogPrint("masternode", "CMasternodePing::CheckAndUpdate - Couldn't find compatible Masternode entry, vin: %s\n", vin.prevout.hash.ToString());
+    LogPrint("masternode", "CMasternodePing::CheckAndUpdate - Couldn't find compatible Masternode entry, vin: %s - %s - %lli\n", vin.prevout.hash.ToString(), blockHash.ToString(), sigTime);
 
     return false;
 }
