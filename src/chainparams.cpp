@@ -191,9 +191,8 @@ public:
         assert(hashGenesisBlock == uint256("0x00000c9d6ee5917dcd9e9d291f4b2283fce7d6b8525a653267bae3a1c5fbdd00"));
         assert(genesis.hashMerkleRoot == uint256("0x64a35990d03a0a06b73a4ec8524ec98f315f5a0ce6b0682743374789c5da6557"));
 
-        vSeeds.push_back(CDNSSeedData("1", "85.255.5.178"));
-        vSeeds.push_back(CDNSSeedData("2", "80.211.194.181"));
-        vSeeds.push_back(CDNSSeedData("3", "194.182.73.166"));
+        vSeeds.push_back(CDNSSeedData("seedereu.beetlecoin.io", "seedereu.beetlecoin.io"));
+        vSeeds.push_back(CDNSSeedData("seederch.beetlecoin.io", "seederch.beetlecoin.io"));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 75); // X
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 85); // b
