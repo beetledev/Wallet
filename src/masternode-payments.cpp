@@ -499,9 +499,9 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         if (!masternodePayments.CanVote(winner.vinMasternode.prevout, winner.nBlockHeight, winner.payeeLevel)) {
             LogPrint("mnpayments", "%s - already voted\n", logString.c_str());
 
-            // Ban after 50 times
-            TRY_LOCK(cs_main, locked);
-            if (locked) Misbehaving(pfrom->GetId(), 2);
+            // // Ban after 50 times
+            // TRY_LOCK(cs_main, locked);
+            // if (locked) Misbehaving(pfrom->GetId(), 1);
             return;
         }
 
@@ -798,9 +798,9 @@ bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
         LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
         mnodeman.AskForMN(pnode, vinMasternode);
 
-        // Ban after 50 times
-        TRY_LOCK(cs_main, locked);
-        if (locked) Misbehaving(pnode->GetId(), 2);
+        // // Ban after 50 times
+        // TRY_LOCK(cs_main, locked);
+        // if (locked) Misbehaving(pnode->GetId(), 2);
         return false;
     }
 
