@@ -1258,8 +1258,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
                     int64_t t = (*i).second;
                     if (GetTime() < t) {
                         LogPrintf("mnget - peer=%i ip=%s already asked me for the list\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
-                        TRY_LOCK(cs_main, locked2);
-                        if (locked2) Misbehaving(pfrom->GetId(), 34);
+                        //TRY_LOCK(cs_main, locked2);
+                        //if (locked2) Misbehaving(pfrom->GetId(), 34);
                         return;
                     }
                 }
