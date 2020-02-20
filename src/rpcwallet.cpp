@@ -2248,7 +2248,7 @@ UniValue setstakesplitthreshold(const UniValue& params, bool fHelp)
             HelpRequiringPassphrase() + "\n"
 
             "\nArguments:\n"
-            "1. value   (numeric, required) Threshold value between 1 and 999999\n"
+            "1. value   (numeric, required) Threshold value between 1 and 999999 or 0 to disable stake-splitting\n"
 
             "\nResult:\n"
             "{\n"
@@ -2262,6 +2262,9 @@ UniValue setstakesplitthreshold(const UniValue& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     uint64_t nStakeSplitThreshold = params[0].get_int();
+
+    if (nStakeSplitThreshold < 0)
+        throw std::runtime_error("Value out of range, min allowed is 0");
 
     if (nStakeSplitThreshold > 999999)
         throw runtime_error("Value out of range, max allowed is 999999");
