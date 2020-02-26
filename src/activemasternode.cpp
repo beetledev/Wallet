@@ -37,7 +37,7 @@ void CActiveMasternode::ManageStatus()
         pmn = mnodeman.Find(pubKeyMasternode);
         if (pmn != NULL) {
             pmn->Check();
-            if (pmn->IsEnabled() && pmn->protocolVersion == PROTOCOL_VERSION) EnableHotColdMasterNode(pmn->vin, pmn->addr);
+            if (pmn->IsEnabled(true) && pmn->protocolVersion == PROTOCOL_VERSION) EnableHotColdMasterNode(pmn->vin, pmn->addr);
         }
     }
 
@@ -476,9 +476,17 @@ std::vector<COutput> CActiveMasternode::SelectCoinsMasternode()
     }
 
     // Filter
-    for (const COutput& out : vCoins) {
-        if (CMasternode::IsDepositCoins(out.tx->vout[out.i].nValue)) {
-            filteredCoins.push_back(out);
+    if (IsSporkActive(SPORK_18_NEW_MASTERNODE_TIERS)) {
+        for (const COutput& out : vCoins) {
+            if (CMasternode::IsDepositCoins(out.tx->vout[out.i].nValue)) {
+                filteredCoins.push_back(out);
+            }
+        }
+    } else {
+        for (const COutput& out : vCoins) {
+            if (CMasternode::Level(out.tx->vout[out.i].nValue, chainActive.Height()) == 3u) {
+                filteredCoins.push_back(out);
+            }
         }
     }
     return filteredCoins;

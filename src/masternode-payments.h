@@ -208,7 +208,7 @@ public:
         ss << nBlockHeight;
         ss << vinMasternode.prevout;
         ss << payeeLevel;
-        ss << payeeVin;
+        ss << payeeVin.prevout;
 
         return ss.GetHash();
     }

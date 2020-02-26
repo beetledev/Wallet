@@ -579,7 +579,7 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
 
             if (pmn != NULL) {
                 if (strCommand == "missing") continue;
-                if (strCommand == "disabled" && pmn->IsEnabled()) continue;
+                if (strCommand == "disabled" && pmn->IsEnabled(true)) continue;
             }
 
             bool result = activeMasternode.CreateBroadcast(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnb);

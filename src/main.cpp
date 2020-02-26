@@ -1564,7 +1564,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
     return true;
 }
 
-bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransaction& tx, bool fLimitFree, bool* pfMissingInputs, bool fRejectInsaneFee, bool isDSTX)
+bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransaction& tx, bool fLimitFree, bool* pfMissingInputs, bool fRejectInsaneFee, bool isDSTX, bool ignoreFees)
 {
     AssertLockHeld(cs_main);
     if (pfMissingInputs)
@@ -1692,7 +1692,7 @@ bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransact
         // but prioritise dstx and don't check fees for it
         if (isDSTX) {
             mempool.PrioritiseTransaction(hash, hash.ToString(), 1000, 0.1 * COIN);
-        } else { // same as !ignoreFees for AcceptToMemoryPool
+        } else if (!ignoreFees) {
             CAmount txMinFee = GetMinRelayFee(tx, nSize, true);
             if (fLimitFree && nFees < txMinFee && !tx.IsZerocoinSpend())
                 return state.DoS(0, error("AcceptableInputs : not enough fees %s, %d < %d",

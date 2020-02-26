@@ -338,6 +338,7 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
 
     bool payNewTiers = IsSporkActive(SPORK_18_NEW_MASTERNODE_TIERS);
     unsigned int level = CMasternode::LevelValue::MIN; //1;
+    unsigned int outputs = 1;
     CAmount mn_payments_total = 0;
 
     for (unsigned mnlevel = payNewTiers ? CMasternode::LevelValue::MIN : CMasternode::LevelValue::MAX; mnlevel <= CMasternode::LevelValue::MAX; ++mnlevel) {
@@ -367,13 +368,28 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
                  * An additional output is appended as the masternode payment
                  */
                 unsigned int i = txNew.vout.size();
+                if (level == 1)
+                    outputs = i-1;
                 txNew.vout.resize(i + 1);
                 txNew.vout[i].scriptPubKey = payee;
                 txNew.vout[i].nValue = masternodePayment;
 
                 //subtract mn payment from the stake reward
-                if (!txNew.vout[1].IsZerocoinMint())
-                    txNew.vout[i - level].nValue -= masternodePayment;
+                if (!txNew.vout[1].IsZerocoinMint()) {
+                    if (outputs == 1) {
+                        // Majority of cases; do it quick and move on
+                        txNew.vout[1].nValue -= masternodePayment;
+                    } else if (outputs > 1) {
+                        // special case, stake is split between (i-1) outputs
+                        CAmount mnPaymentSplit = masternodePayment / outputs;
+                        CAmount mnPaymentRemainder = masternodePayment - (mnPaymentSplit * outputs);
+                        for (unsigned int j=1; j<=outputs; j++) {
+                            txNew.vout[j].nValue -= mnPaymentSplit;
+                        }
+                        // in case it's not an even division, take the last bit of dust from the last one
+                        txNew.vout[outputs].nValue -= mnPaymentRemainder;
+                    }
+                }
             } else {
                 txNew.vout.resize(1 + level);
                 txNew.vout[level].scriptPubKey = payee;
@@ -494,8 +510,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
         if (!winner.SignatureValid()) {
             if (masternodeSync.IsSynced()) {
                 LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnw - invalid signature from peer=%s ip=%s\n", pfrom->GetId(), pfrom->addr.ToString().c_str());
-                TRY_LOCK(cs_main, locked);
-                if (locked) Misbehaving(pfrom->GetId(), 20);
+                Misbehaving(pfrom->GetId(), 20);
             }
             // it could just be a non-synced masternode
             mnodeman.AskForMN(pfrom, winner.vinMasternode);
@@ -632,7 +647,7 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
         CAmount requiredMasternodePayment = GetMasternodePayment(nBlockHeight, payee.mnlevel, nReward);
 
         if (strPayeesPossible != "")
-            strPayeesPossible += ",";
+            strPayeesPossible += ", ";
 
         CTxDestination address1;
         ExtractDestination(payee.scriptPubKey, address1);
@@ -685,7 +700,7 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew)
             LogPrint("mnpayments","Sending mnget: peer=%d ip=%s v=%d\n", pnode->id, pnode->addr.ToString().c_str(), pnode->nVersion);
     }
 
-    return (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) ? false : true);
+    return false;
 }
 
 std::string CMasternodeBlockPayees::GetRequiredPaymentsString()
@@ -704,7 +719,7 @@ std::string CMasternodeBlockPayees::GetRequiredPaymentsString()
                               + std::to_string(payee.nVotes);
 
         if (ret != "Unknown") {
-            ret += "," + payee_str;
+            ret += ", " + payee_str;
         } else {
             ret = payee_str;
         }
@@ -795,11 +810,7 @@ bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
         if (n > MNPAYMENTS_SIGNATURES_TOTAL * 2) {
             strError = strprintf("Masternode not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL * 2, n);
             LogPrint("masternode","CMasternodePaymentWinner::IsValid - %s\n", strError);
-
-            if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && masternodeSync.IsSynced()) {
-                TRY_LOCK(cs_main, locked);
-                if (locked) Misbehaving(pnode->GetId(), 20);
-            }
+            if (IsSporkActive(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) && masternodeSync.IsSynced()) Misbehaving(pnode->GetId(), 20);
         }
         return false;
     }
