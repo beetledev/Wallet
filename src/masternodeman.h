@@ -1,7 +1,7 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2018 The PIVX developers
 // Copyright (c) 2017-2018 The XDNA Core developers
-// Copyright (c) 2018-2019 The BeetleCoin Core developers
+// Copyright (c) 2018-2019 The BeetleCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,7 +16,6 @@
 #include "sync.h"
 #include "util.h"
 
-#define MASTERNODES_DUMP_SECONDS (15 * 60)
 #define MASTERNODES_DSEG_SECONDS (3 * 60 * 60)
 
 class CMasternodeMan;
@@ -103,7 +102,7 @@ public:
     static CValidationState GetInputCheckingTx(const CTxIn& vin, CMutableTransaction&);
 
     /// Add an entry
-    bool Add(CMasternode& mn);
+    bool Add(const CMasternode& mn);
 
     /// Ask (source) node for mnb
     void AskForMN(CNode* pnode, CTxIn& vin);

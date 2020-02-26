@@ -161,7 +161,6 @@ public:
     CMasternode(const CMasternode& other);
     CMasternode(const CMasternodeBroadcast& mnb);
 
-
     void swap(CMasternode& first, CMasternode& second) // nothrow
     {
         // enable ADL (not necessary in our case, but good practice)
@@ -261,7 +260,7 @@ public:
         lastPing = CMasternodePing();
     }
 
-    bool IsEnabled()
+    bool IsEnabled() const
     {
         return activeState == MASTERNODE_ENABLED;
     }
