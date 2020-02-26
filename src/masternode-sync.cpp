@@ -30,6 +30,25 @@ bool CMasternodeSync::IsSynced()
     return RequestedMasternodeAssets == MASTERNODE_SYNC_FINISHED;
 }
 
+bool CMasternodeSync::IsSporkListSynced()
+{
+    return RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS;
+}
+
+bool CMasternodeSync::IsMasternodeListSynced()
+{
+    return RequestedMasternodeAssets > MASTERNODE_SYNC_LIST;
+}
+
+bool CMasternodeSync::NotCompleted()
+{
+    return (!IsSynced() && (
+            !IsSporkListSynced() ||
+            IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) ||
+            IsSporkActive(SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT) ||
+            IsSporkActive(SPORK_13_ENABLE_SUPERBLOCKS)));
+}
+
 bool CMasternodeSync::IsBlockchainSynced()
 {
     static bool fBlockchainSynced = false;
@@ -50,7 +69,7 @@ bool CMasternodeSync::IsBlockchainSynced()
     if (!lockMain) return false;
 
     CBlockIndex* pindex = chainActive.Tip();
-    if (pindex == NULL) return false;
+    if (!pindex) return false;
 
     // if the last block is over 12 hours old, we are not synced
     if (pindex->nTime + 12 * 60 * 60 < GetTime())
@@ -238,7 +257,7 @@ void CMasternodeSync::Process()
     if (tick++ % MASTERNODE_SYNC_TIMEOUT != 0) return;
 
     if (IsSynced()) {
-        /* 
+        /*
             Resync if we lose all masternodes from sleep/wake or failure to sync originally
         */
         if (mnodeman.CountEnabled() == 0) {
@@ -367,8 +386,8 @@ void CMasternodeSync::Process()
             if (RequestedMasternodeAssets == MASTERNODE_SYNC_BUDGET) {
 
                 // We'll start rejecting votes if we accidentally get set as synced too soon
-                if (lastBudgetItem > 0 && lastBudgetItem < GetTime() - MASTERNODE_SYNC_TIMEOUT * 2 && RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD) { 
-                    
+                if (lastBudgetItem > 0 && lastBudgetItem < GetTime() - MASTERNODE_SYNC_TIMEOUT * 2 && RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD) {
+
                     // Hasn't received a new item in the last five seconds, so we'll move to the
                     GetNextAsset();
 

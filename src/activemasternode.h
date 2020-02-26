@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2016 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The BeetleCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -15,11 +15,11 @@
 #include "sync.h"
 #include "wallet.h"
 
-#define ACTIVE_MASTERNODE_INITIAL           0 // initial state
-#define ACTIVE_MASTERNODE_SYNC_IN_PROCESS   1
-#define ACTIVE_MASTERNODE_INPUT_TOO_NEW     2
-#define ACTIVE_MASTERNODE_NOT_CAPABLE       3
-#define ACTIVE_MASTERNODE_STARTED           4
+#define ACTIVE_MASTERNODE_INITIAL 0 // initial state
+#define ACTIVE_MASTERNODE_SYNC_IN_PROCESS 1
+#define ACTIVE_MASTERNODE_INPUT_TOO_NEW 2
+#define ACTIVE_MASTERNODE_NOT_CAPABLE 3
+#define ACTIVE_MASTERNODE_STARTED 4
 
 // Responsible for activating the Masternode and pinging the network
 class CActiveMasternode
