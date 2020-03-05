@@ -27,7 +27,7 @@ using namespace boost;
     Sporks 11,12, and 16 to be removed with 1st zerocoin release
 */
 #define SPORK_START 10001
-#define SPORK_END   10021
+#define SPORK_END   10022
 
 #define SPORK_2_SWIFTTX                        10001
 #define SPORK_3_SWIFTTX_BLOCK_FILTERING        10002
@@ -46,6 +46,7 @@ using namespace boost;
 #define SPORK_20_MN_WINNER_MINIMUM_AGE         10019
 #define SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4    10020
 #define SPORK_22_NEW_PROTOCOL_ENFORCEMENT_5    10021
+#define SPORK_23_NEW_PROTOCOL_ENFORCEMENT_6    10022
 
 //#define SPORK_11_LOCK_INVALID_UTXO           10010
 //#define SPORK_12_RECONSIDER_BLOCKS           10011
@@ -67,6 +68,7 @@ using namespace boost;
 #define SPORK_20_MN_WINNER_MINIMUM_AGE_DEFAULT          8000        // Age in seconds. This should be > MASTERNODE_REMOVAL_SECONDS to avoid misconfigured new nodes in the list. Set this to zero to emulate classic behaviour
 #define SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4_DEFAULT     4070908800  // OFF
 #define SPORK_22_NEW_PROTOCOL_ENFORCEMENT_5_DEFAULT     4070908800  // OFF
+#define SPORK_23_NEW_PROTOCOL_ENFORCEMENT_6_DEFAULT     4070908800  // OFF
 
 //#define SPORK_11_LOCK_INVALID_UTXO_DEFAULT            4070908800  // OFF - NOTE: this is block height not time!
 
