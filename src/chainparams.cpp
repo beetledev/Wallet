@@ -149,7 +149,7 @@ public:
         nDefaultPort = 3133;
         bnProofOfWorkLimit = ~uint256(0) >> 20;
         //nSubsidyHalvingInterval = 2100000;
-        nMaxReorganizationDepth = 10000;
+        nMaxReorganizationDepth = 100;
         nEnforceBlockUpgradeMajority = 7560; // 70%
         nRejectBlockOutdatedMajority = 7560; // 70%
         nToCheckBlockUpgradeMajority = 10800; // Approximate expected amount of blocks in 7 days (1440*7.5)

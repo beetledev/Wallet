@@ -156,9 +156,10 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
         return true; // genesis block's modifier is 0
     }
     if (pindexPrev->nHeight == 0) {
-        //Give a stake modifier to the first block
+        // Give a stake modifier to the first block
         fGeneratedStakeModifier = true;
-        nStakeModifier = uint64_t("stakemodifier");
+        //nStakeModifier = uint64_t("stakemodifier"); // This code is nonsense and just reads a garbage number from memory
+        nStakeModifier = 0x7374616b656d6f64; // stakemod
         return true;
     }
 
@@ -377,8 +378,10 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake, std::uniqu
             return error("CheckProofOfStake() : INFO: read txPrev failed");
 
         //verify signature and script
-        if (!VerifyScript(txin.scriptSig, txPrev.vout[txin.prevout.n].scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&tx, 0)))
-            return error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str());
+        ScriptError serror = SCRIPT_ERR_OK;
+        if (!VerifyScript(txin.scriptSig, txPrev.vout[txin.prevout.n].scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&tx, 0), &serror)) {
+            return error("CheckProofOfStake() : VerifySignature failed on coinstake %s, %s", tx.GetHash().ToString().c_str(), ScriptErrorString(serror));
+        }
 
         CBeetStake* beetInput = new CBeetStake();
         beetInput->SetInput(txPrev, txin.prevout.n);
