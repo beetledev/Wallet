@@ -174,6 +174,7 @@ public:
         nStartTreasuryBlock = nModifierUpdateBlock;
         nTreasuryBlockStep = 1 * 24 * 60 * 60 / nTargetSpacing; // Once per day
         nMasternodeTiersStartHeight = nStartTreasuryBlock;
+        nSecondForkBlock = 1200000;
 
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot
@@ -309,6 +310,7 @@ public:
         nStartTreasuryBlock = 10;
         nTreasuryBlockStep = 20; //24 * 6 * 60 / nTargetSpacing; // Ten times per day
         nMasternodeTiersStartHeight = -1;
+        nSecondForkBlock = 0;
         nZerocoinStartHeight = 2100000000;
         nBlockEnforceSerialRange = -1; //Enforce serial range starting this block
         nBlockRecalculateAccumulators = nZerocoinStartHeight + 10; //Trigger a recalculation of accumulators

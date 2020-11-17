@@ -131,6 +131,7 @@ public:
     int Zerocoin_Block_V2_Start() const { return nBlockZerocoinV2; }
     CAmount InvalidAmountFiltered() const { return nInvalidAmountFiltered; }
     int NewMNTiersHeight() const { return nMasternodeTiersStartHeight; }
+    int SecondForkBlock() const { return nSecondForkBlock; }
 
     /** Treasury variables **/
     int TreasuryStartBlock() const { return nStartTreasuryBlock; }
@@ -201,6 +202,7 @@ protected:
     int nBlockEnforceInvalidUTXO;
     int nBlockZerocoinV2;
     int nMasternodeTiersStartHeight;
+    int nSecondForkBlock;
 
     int nStartTreasuryBlock;
     int nTreasuryBlockStep;

@@ -4110,6 +4110,12 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
             REJECT_OBSOLETE, "bad-version");
     }
 
+    // Reject block.nVersion=4 blocks when past the fork height
+    if (block.nVersion < 5 && nHeight >= Params().SecondForkBlock() && Params().NetworkID() == CBaseChainParams::MAIN) {
+        return state.Invalid(error("%s : rejected nVersion=%d block", __func__, block.nVersion),
+            REJECT_OBSOLETE, "bad-version");
+    }
+
     return true;
 }
 
@@ -5496,11 +5502,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         // BeetleCoin: We use certain sporks during IBD, so check to see if they are
         // available. If not, ask the first peer connected for them.
-        bool fMissingSporks = !pSporkDB->SporkExists(SPORK_14_NEW_PROTOCOL_ENFORCEMENT) &&
-                !pSporkDB->SporkExists(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2) &&
-                !pSporkDB->SporkExists(SPORK_19_NEW_PROTOCOL_ENFORCEMENT_3) &&
-                !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_4) &&
-                !pSporkDB->SporkExists(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_5) &&
+        bool fMissingSporks = !pSporkDB->SporkExists(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_6) &&
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE);
 
         if (fMissingSporks || !fRequestedSporksIDB){
@@ -5518,10 +5520,11 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             return false;
 
         // Disconnect from outdated peers
-        if (pfrom->nVersion < 70102 && (chainActive.Height() + 1 >= Params().ModifierUpgradeBlock() || Params().NetworkID() != CBaseChainParams::MAIN)) {
+        const int nMinUpdatedPeerProto = 70108;
+        if (pfrom->nVersion < nMinUpdatedPeerProto && (chainActive.Height() + 1 >= Params().SecondForkBlock() || Params().NetworkID() != CBaseChainParams::MAIN)) {
             LogPrintf("peer=%d using obsolete version %i; disconnecting\n", pfrom->id, pfrom->nVersion);
             pfrom->PushMessage("reject", strCommand, REJECT_OBSOLETE,
-                               strprintf("Version must be %d or greater", 70102));
+                               strprintf("Version must be %d or greater", nMinUpdatedPeerProto));
             pfrom->fDisconnect = true;
             return false;
         }
@@ -6385,6 +6388,10 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 //       it was the one which was commented out
 int ActiveProtocol()
 {
+    // SPORK_23, used for 2.2.0.0
+    if (IsSporkActive(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_6))
+            return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_6;
+
     // SPORK_22, used for 2.1.5.0
     if (IsSporkActive(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_5))
             return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_5;
