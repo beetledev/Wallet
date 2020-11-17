@@ -20,7 +20,7 @@ static const int INIT_PROTO_VERSION = 210;
 static const int GETHEADERS_VERSION = 70000;
 
 //! disconnect from peers older than this proto version
-static const int MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT  = 70105;
+static const int MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT  = 70107;
 static const int MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT   = 70103;
 static const int MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_2 = 70104;
 static const int MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT_3 = 70105;

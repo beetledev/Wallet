@@ -57,54 +57,48 @@ static void convertSeed6(std::vector<CAddress>& vSeedsOut, const SeedSpec6* data
 static Checkpoints::MapCheckpoints mapCheckpoints =
     boost::assign::map_list_of
     (0, uint256("00000c9d6ee5917dcd9e9d291f4b2283fce7d6b8525a653267bae3a1c5fbdd00"))
-    (196750, uint256("92978c520c2a3f78f01ad1e8a2b3da382e35f51d5eb68e654b3626c9257f4de9"))
-    (320320, uint256("3ce055b2728aec7bd788c61e43c6320ec3b361b13e6d44c4e2bc619c558c597a"))
-    (339800, uint256("4105f23e74afabea348838ac8740a500e5754703321ddd19de9036c3f32d3ce2"))
+    (50000, uint256("211798922d84dd3a816fe251f5a2ec32910f6f226e759abdbb0ea629ab0f9c98"))
+    (100000, uint256("6a7dc0e5cf7567a356624fb238742b9db1d575bae06c1bf914d20d91a55436ac"))
+    (150000, uint256("2196baf2af3553b453842cb4598966d4d284ef88afebfe623f7fc7e30b992203"))
+    (200000, uint256("1df5a144d0f9b7782f7bd272b08d33957fc0033f7c4b14210d0dc76d595e28cf"))
+    (250000, uint256("73880d48ac6868e059da9340dc830b8b28d6649efbd46de6f6196e002c0751fa"))
+    (300000, uint256("a7d09f0093e50268f01c2646c0f346b1d0ac37807a3abead0df34ff94386f0c4"))
+    (350000, uint256("dd276b42f8efc8045f418d9f670d739738100c76c2e43d5acd1f29fdce5a2cb7"))
     (400000, uint256("95312e692c2b8ee9148dd55cd34d4f1215c75be90f7d6764dcfa063d180cfa8b"))
+    (450000, uint256("c9ad4da1a469f337059c502806990f4918fa536e309ce51a6895489411f4f859"))
     (500000, uint256("8f8ae0a206f418a7a6a8f6f67219cd3761cf2616ddeb4780fcb8a6242bf95996"))
-    (536400, uint256("1d4bd5d4b490368911447cc4fc3d211dbc76261fb9b8323bcd5c0e319b211caf"))
-    (540000, uint256("f045cbd1630fe4efe33153d9b3d97d65e2119efbb527a49075b2270e60270d64"))
-    (545000, uint256("b7d93ca0614a7ce87e1436e5e82888101665c6b17fa86972d5db27118caa7a92"))
-    (549000, uint256("00f23d3de5f23558f8f205f7c353d63f027e21543d7dce6a163bb6a21103e793"))
-    (549400, uint256("1fcc94a88278aa599c7a56efe7fc13452fb1e17c73e1f2a04bf617c5770e045a"))
     (550000, uint256("fdc92657576685dc03016cc371c2099f5c791efcf883a39bf5fe5e38009fb969"))
-    (560000, uint256("957f3011e0536d4ba5948ab24c752d72bfba47f68a1f6a3820a749b22efdd48e"))
-    (570000, uint256("5e763ba286664c8654bd8ee4cc0d4fdcd7e4af814fd1f46eae2d4785dc8c2e88"))
-    (574440, uint256("45d8c0e097a4061bd22f8cf995e1e1f856ad15eae291e1b58f1c8f004ba146bf"))
     (600000, uint256("e508a4b604fcf6956b975706e7e0df6bd41c6d1cb6d9ecbeefa9cc2e9d63f74f"))
-    (630000, uint256("7e4c50fc7730b0a04e01b3510a6c563b124668ba982f9bbecf29ed61ec461dd7"))
-    (660000, uint256("b7f1f7f7bde4f7a37889cf1b713634af31020c884456af4afff6f479379865c3"))
-    (690000, uint256("cea07312dd0194e10ae6594634989b4009d4815bf659bc607d6d3fe61d3310c6"))
-    (697397, uint256("e61dbdf9749782569cb32f0c8eaf3589520979ac88d542b3b25c1acf19876853"))
+    (650000, uint256("b948291e40bc18b11339248fc5861803a9fc3286312cee08cb0b475364e93668"))
     (700000, uint256("be8a8e5fd45a4b912d729231edfdc3e96108260d81757068b203e011d2955f89"))
-    (710000, uint256("e3fdcf241fbadcfa6c736f30b07f252232b9e58d22d347935bf96c0880466e85"))
-    (720000, uint256("ef6b2d980e4b8eae143fcf6d8b7e585c72589206f0652a8f058f4c2674edca7c"))
-    (730000, uint256("450d82304ae06c5dfb8190528e16e27acff44a46543ff4412e9508575e6e3ca1"))
-    (740000, uint256("415721140af9e3c4283def528c5ca129bd7e81938726fb3fec984d67974aea2e"))
     (750000, uint256("db40df6362d4cec724ea9e7274a6b7e6765cf4583f0e66e55fad48dcd0e4162d"))
-    (760000, uint256("feae0e9bd6aed9ce5c79d45a518b0810f7a2d6f93316dc1c1b7364c1f15ae400"))
-    (762312, uint256("aaa0e619d49f8cadbfa3c586c38146496295ec3d6920221c07ae346aa38fee99"))
-    (772788, uint256("164329851730c601db13f43cc9f55e59de94997bc96533c055150dcd50b71522"))
-    ;
-
+    (800000, uint256("96234e1990d81879517ccefaf80c2a4d002c648ce0baf96b4197cbc7c6569298"))
+    (850000, uint256("01b7066b359c327ebbd5e0a43b5222ec93d6e30eff5d93e54351fa8cb6b9766c"))
+    (900000, uint256("e88bc6d85922852761da1d261600f1071e019183a1d2d204e6b3680a1366a30f"))
+    (950000, uint256("74c895ecb4d76202e086b78dce9c44415279aaecff207e5df89726f05ac7b769"))
+    (1000000, uint256("89cd375ad40438fce0fab4f55be3a5c03db00e87de2d58f5ac00288c04408f60"))
+    (1050000, uint256("2cb8d49c2f63ce1fc4188058bd9d9074e5a23e5eb64b159343e98727693d41be"))
+    (1100000, uint256("e5b59a6b3819832930a709835201a59e313caa445dfea4b9ffd224cf1a605350"));
 static const Checkpoints::CCheckpointData data = {
     &mapCheckpoints,
-    1583366329, // * UNIX timestamp of last checkpoint block
-    1764532,    // * total number of transactions between genesis and last checkpoint
-                //   (the tx=... number in the UpdateTip debug.log lines)
-    3000        // * estimated number of transactions per day after checkpoint
+    1603040428, // * UNIX timestamp of last checkpoint block
+    2473402,    // * total number of transactions between genesis and last checkpoint
+                //   (the tx=... number in the SetBestChain debug.log lines)
+    2000        // * estimated number of transactions per day after checkpoint
 };
 
 static Checkpoints::MapCheckpoints mapCheckpointsTestnet =
-    boost::assign::map_list_of(0, uint256("0x001"));
+    boost::assign::map_list_of
+    (0, uint256("0x001"));
 static const Checkpoints::CCheckpointData dataTestnet = {
     &mapCheckpointsTestnet,
-    1740710,
+    1536981458,
     0,
     250};
 
 static Checkpoints::MapCheckpoints mapCheckpointsRegtest =
-    boost::assign::map_list_of(0, uint256("0x001"));
+    boost::assign::map_list_of
+    (0, uint256("0x001"));
 static const Checkpoints::CCheckpointData dataRegtest = {
     &mapCheckpointsRegtest,
     1454124731,
@@ -147,15 +141,15 @@ public:
         pchMessageStart[3] = 0x18;
         vAlertPubKey = ParseHex("04DE3E3D0380A7359563B990F7AF701320F44CEB0FBC325CD7EB06A6C228FE57D8448AD2365E7F36B31591B9B3BFCE6A5FE9A01773215604CB9DD512470AFBB9BB");
         nDefaultPort = 3133;
-        bnProofOfWorkLimit = ~uint256(0) >> 20;
+        bnProofOfWorkLimit = ~uint256(0) >> 20; // 0x1e0fffff
         //nSubsidyHalvingInterval = 2100000;
-        nMaxReorganizationDepth = 10000;
+        nMaxReorganizationDepth = 100;
         nEnforceBlockUpgradeMajority = 7560; // 70%
         nRejectBlockOutdatedMajority = 7560; // 70%
         nToCheckBlockUpgradeMajority = 10800; // Approximate expected amount of blocks in 7 days (1440*7.5)
         nMinerThreads = 0;
-        nTargetTimespan = 40 * 60; // BeetleCoin: 40 minutes
-        nTargetSpacing = 1 * 60; // BeetleCoin: 1 minute
+        nTargetTimespan = 40 * 60; // 40 minutes
+        nTargetSpacing = 1 * 60; // 1 minute
         nMaturity = 10;
         nMasternodeCountDrift = 20;
         nFirstSupplyReduction = 400000000 * COIN;
@@ -180,6 +174,7 @@ public:
         nStartTreasuryBlock = nModifierUpdateBlock;
         nTreasuryBlockStep = 1 * 24 * 60 * 60 / nTargetSpacing; // Once per day
         nMasternodeTiersStartHeight = nStartTreasuryBlock;
+        nSecondForkBlock = 1200000;
 
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot
@@ -206,9 +201,14 @@ public:
         genesis.nBits = 0x1e0ffff0;
         genesis.nNonce = 1510561;
 
+        uint256 hashTarget = uint256().SetCompact(genesis.nBits);
+        assert(genesis.GetPoWHash() <= hashTarget);
+
         hashGenesisBlock = genesis.GetHash();
-        assert(hashGenesisBlock == uint256("0x00000c9d6ee5917dcd9e9d291f4b2283fce7d6b8525a653267bae3a1c5fbdd00"));
+        //printf("Merkle hash main: %s\n", genesis.hashMerkleRoot.ToString().c_str());
+        //printf("Block hash main: %s\n", hashGenesisBlock.ToString().c_str());
         assert(genesis.hashMerkleRoot == uint256("0x64a35990d03a0a06b73a4ec8524ec98f315f5a0ce6b0682743374789c5da6557"));
+        assert(hashGenesisBlock == uint256("0x00000c9d6ee5917dcd9e9d291f4b2283fce7d6b8525a653267bae3a1c5fbdd00"));
 
         vSeeds.push_back(CDNSSeedData("seedereu.beetlecoin.io", "seedereu.beetlecoin.io"));
         vSeeds.push_back(CDNSSeedData("seederch.beetlecoin.io", "seederch.beetlecoin.io"));
@@ -297,8 +297,8 @@ public:
         nRejectBlockOutdatedMajority = 4032; // 70%
         nToCheckBlockUpgradeMajority = 5760; // 4 days
         nMinerThreads = 0;
-        nTargetTimespan = 10 * 60; // BeetleCoin: 10 minutes
-        nTargetSpacing = 1 * 60; // BeetleCoin: 1 minute
+        nTargetTimespan = 10 * 60; // 10 minutes
+        nTargetSpacing = 48; // 48 seconds
         nLastPOWBlock = 200;
         nMaturity = 15;
         nMasternodeCountDrift = 4;
@@ -310,8 +310,8 @@ public:
         nStartTreasuryBlock = 10;
         nTreasuryBlockStep = 20; //24 * 6 * 60 / nTargetSpacing; // Ten times per day
         nMasternodeTiersStartHeight = -1;
-        nZerocoinStartHeight = 50;
-        //nZerocoinStartTime = 1524711188;
+        nSecondForkBlock = 0;
+        nZerocoinStartHeight = 2100000000;
         nBlockEnforceSerialRange = -1; //Enforce serial range starting this block
         nBlockRecalculateAccumulators = nZerocoinStartHeight + 10; //Trigger a recalculation of accumulators
         nBlockFirstFraudulent = nZerocoinStartHeight; //First block that bad serials emerged
@@ -323,12 +323,18 @@ public:
         nRejectOldSporkKey = 1522454400; //!> Reject old spork key after Saturday, March 31, 2018 12:00:00 AM GMT
 
         //! Modify the testnet genesis block so the timestamp is valid for a later start.
-        genesis.nTime = 1515616140;
-        genesis.nNonce = 79855;
+        genesis.nTime = 1536981458;
+        genesis.nBits = bnProofOfWorkLimit.GetCompact(); //0x1f0fffff;
+        genesis.nNonce = 2871;
+
+        uint256 hashTarget = uint256().SetCompact(genesis.nBits);
+        assert(genesis.GetPoWHash() <= hashTarget);
 
         hashGenesisBlock = genesis.GetHash();
-        assert(hashGenesisBlock == uint256("0xc26eb3f91ed71e314384e46bbb22dc58177a27cfea46def2d845dd5422cab4a1"));
+        //printf("Merkle hash test: %s\n", genesis.hashMerkleRoot.ToString().c_str());
+        //printf("Block hash test: %s\n", hashGenesisBlock.ToString().c_str());
         assert(genesis.hashMerkleRoot == uint256("0x64a35990d03a0a06b73a4ec8524ec98f315f5a0ce6b0682743374789c5da6557"));
+        assert(hashGenesisBlock == uint256("0x000ecdc69e08dbe94ed34b7ac2eba035234ee12082ca2f764246f23a6e3e3af1"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -380,27 +386,43 @@ public:
     {
         networkID = CBaseChainParams::REGTEST;
         strNetworkID = "regtest";
-        strNetworkID = "regtest";
         pchMessageStart[0] = 0x69;
         pchMessageStart[1] = 0xcf;
         pchMessageStart[2] = 0x7e;
         pchMessageStart[3] = 0xac;
+        nDefaultPort = 51436;
         //nSubsidyHalvingInterval = 150;
         nEnforceBlockUpgradeMajority = 750;
         nRejectBlockOutdatedMajority = 950;
         nToCheckBlockUpgradeMajority = 1000;
         nMinerThreads = 1;
-        nTargetTimespan = 10 * 60; // BeetleCoin: 10 minutes
-        nTargetSpacing = 1 * 60; // BeetleCoin: 1 minutes
+        nTargetTimespan = 10 * 60; // 10 minutes
+        nTargetSpacing = 48; // 48 seconds
         bnProofOfWorkLimit = ~uint256(0) >> 1;
-        genesis.nTime = 1515524400;
-        genesis.nBits = 0x1e0ffff0;
-        genesis.nNonce = 732084;
+        genesis.nVersion = 5;
+        genesis.nTime = 1454124731;
+        genesis.nBits = bnProofOfWorkLimit.GetCompact(); //0x207fffff;
+        genesis.nNonce = 1;
+
+        uint256 hashTarget = uint256().SetCompact(genesis.nBits);
+        /*while (true) {
+            uint256 hash = genesis.GetPoWHash();
+            if (hash <= hashTarget) {
+                // Found a solution
+                printf("genesis block found\n   hash: %s\n target: %s\n   bits: %08x\n  nonce: %u\n", hash.ToString().c_str(), hashTarget.ToString().c_str(), genesis.nBits, genesis.nNonce);
+                break;
+            }
+            genesis.nNonce += 1;
+            if ((genesis.nNonce & 0x1ffff) == 0)
+                printf("testing nonce: %u\n", genesis.nNonce);
+        }*/
+        assert(genesis.GetPoWHash() <= hashTarget);
 
         hashGenesisBlock = genesis.GetHash();
-        nDefaultPort = 51436;
-        assert(hashGenesisBlock == uint256("0x2949492cb176f49ef3bf86a3a86f0f7755f974e383b1b2c649452aaf48e8a295"));
+        //printf("Merkle hash reg: %s\n", genesis.hashMerkleRoot.ToString().c_str());
+        //printf("Block hash reg: %s\n", hashGenesisBlock.ToString().c_str());
         assert(genesis.hashMerkleRoot == uint256("0x64a35990d03a0a06b73a4ec8524ec98f315f5a0ce6b0682743374789c5da6557"));
+        assert(hashGenesisBlock == uint256("0x1916619e80782a2c6c345cbe4c794ff43565eedc57e1d0b047c4cc0d4234b449"));
 
         vFixedSeeds.clear(); //! Testnet mode doesn't have any fixed seeds.
         vSeeds.clear();      //! Testnet mode doesn't have any DNS seeds.

@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <vector>
 
+static const int64_t DEFAULT_MAX_TIME_ADJUSTMENT = 60; // MAX_FUTURE_BLOCK_TIME / 2 = 90 seconds
+
 class CNetAddr;
 
 /** 

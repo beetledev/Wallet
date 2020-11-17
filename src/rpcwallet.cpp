@@ -450,6 +450,59 @@ UniValue sendtoaddressix(const UniValue& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
+UniValue burncoins(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw std::runtime_error(
+            "burncoins amount ( \"comment\" )\n"
+            "\nBurn an amount of coins. The amount is a real and is rounded to the nearest 0.00000001\n" +
+            HelpRequiringPassphrase() + "\n"
+
+            "\nArguments:\n"
+            "1. \"amount\"      (numeric, required) The amount in BEET to burn. eg 0.1\n"
+            "2. \"comment\"     (string, optional) A comment embedded in the transaction on the blockchain.\n"
+
+            "\nResult:\n"
+            "\"transactionid\"  (string) The transaction id.\n"
+
+            "\nExamples:\n" +
+            HelpExampleCli("burncoins", "0.1") +
+            HelpExampleCli("burncoins", "0.1 \"hello world\"") +
+            HelpExampleRpc("burncoins", "0.1, \"hello world\""));
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    // Amount
+    CAmount nAmount = AmountFromValue(params[0]);
+    if (nAmount > pwalletMain->GetBalance())
+        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient funds");
+
+    // Comment
+    CWalletTx wtx;
+    CScript burnScript = CScript() << OP_RETURN;
+    if (params.size() > 1 && !params[1].isNull() && !params[1].get_str().empty()) {
+        if (params[1].get_str().length() > MAX_OP_RETURN_RELAY - 3)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Comment cannot be longer than %u characters", MAX_OP_RETURN_RELAY - 3));
+        burnScript << ToByteVector(params[1].get_str());
+    }
+
+    EnsureWalletIsUnlocked();
+    CReserveKey reservekey(pwalletMain);
+    int64_t nFeeRequired;
+    std::string strError;
+
+    if (!pwalletMain->CreateTransaction(burnScript, nAmount, wtx, reservekey, nFeeRequired, strError)) {
+        if (nAmount + nFeeRequired > pwalletMain->GetBalance())
+            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
+        LogPrintf("BurnCoins() : %s\n", strError);
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+    if (!pwalletMain->CommitTransaction(wtx, reservekey))
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
+
+    return wtx.GetHash().GetHex();
+}
+
 UniValue listaddressgroupings(const UniValue& params, bool fHelp)
 {
     if (fHelp)
@@ -2248,7 +2301,7 @@ UniValue setstakesplitthreshold(const UniValue& params, bool fHelp)
             HelpRequiringPassphrase() + "\n"
 
             "\nArguments:\n"
-            "1. value   (numeric, required) Threshold value between 1 and 999999\n"
+            "1. value   (numeric, required) Threshold value between 1 and 9999999 or 0 to disable stake-splitting\n"
 
             "\nResult:\n"
             "{\n"
@@ -2261,10 +2314,13 @@ UniValue setstakesplitthreshold(const UniValue& params, bool fHelp)
 
     EnsureWalletIsUnlocked();
 
-    uint64_t nStakeSplitThreshold = params[0].get_int();
+    int64_t nStakeSplitThreshold = params[0].get_int64();
 
-    if (nStakeSplitThreshold > 999999)
-        throw runtime_error("Value out of range, max allowed is 999999");
+    if (nStakeSplitThreshold < 0)
+        throw std::runtime_error("Value out of range, min allowed is 0");
+
+    if (nStakeSplitThreshold > 9999999)
+        throw std::runtime_error("Value out of range, max allowed is 9999999");
 
     CWalletDB walletdb(pwalletMain->strWalletFile);
     LOCK(pwalletMain->cs_wallet);

@@ -233,12 +233,6 @@ bool CWalletDB::WriteAutoCombineSettings(bool fEnable, CAmount nCombineThreshold
     return Write(std::string("autocombinesettings"), pSettings, true);
 }
 
-bool CWalletDB::WriteDefaultKey(const CPubKey& vchPubKey)
-{
-    nWalletDBUpdated++;
-    return Write(std::string("defaultkey"), vchPubKey);
-}
-
 bool CWalletDB::ReadPool(int64_t nPool, CKeyPool& keypool)
 {
     return Read(std::make_pair(std::string("pool"), nPool), keypool);
@@ -592,7 +586,14 @@ bool ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue, CW
                 (keyMeta.nCreateTime < pwallet->nTimeFirstKey))
                 pwallet->nTimeFirstKey = keyMeta.nCreateTime;
         } else if (strType == "defaultkey") {
-            ssValue >> pwallet->vchDefaultKey;
+            // We don't want or need the default key, but if there is one set,
+            // we want to make sure that it is valid so that we can detect corruption
+            CPubKey vchPubKey;
+            ssValue >> vchPubKey;
+            if (!vchPubKey.IsValid()) {
+                strErr = "Error reading wallet database: Default Key corrupt";
+                return false;
+            }
         } else if (strType == "pool") {
             int64_t nIndex;
             ssKey >> nIndex;
@@ -674,7 +675,6 @@ static bool IsKeyType(string strType)
 
 DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
 {
-    pwallet->vchDefaultKey = CPubKey();
     CWalletScanState wss;
     bool fNoncriticalErrors = false;
     DBErrors result = DB_LOAD_OK;
@@ -712,7 +712,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
             if (!ReadKeyValue(pwallet, ssKey, ssValue, wss, strType, strErr)) {
                 // losing keys is considered a catastrophic error, anything else
                 // we assume the user can live with:
-                if (IsKeyType(strType))
+                if (IsKeyType(strType) || strType == "defaultkey")
                     result = DB_CORRUPT;
                 else {
                     // Leave other errors alone, if we try to fix them we might make things worse.
@@ -773,7 +773,6 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
 
 DBErrors CWalletDB::FindWalletTx(CWallet* pwallet, vector<uint256>& vTxHash, vector<CWalletTx>& vWtx)
 {
-    pwallet->vchDefaultKey = CPubKey();
     bool fNoncriticalErrors = false;
     DBErrors result = DB_LOAD_OK;
 
@@ -1019,6 +1018,10 @@ bool AttemptBackupWallet(const CWallet& wallet, const filesystem::path& pathSrc,
     bool retStatus;
     string strMessage;
     try {
+        if (boost::filesystem::equivalent(pathSrc, pathDest)) {
+            LogPrintf("cannot backup to wallet source file %s\n", pathDest.string());
+            return false;
+        }
 #if BOOST_VERSION >= 105800 /* BOOST_LIB_VERSION 1_58 */
         filesystem::copy_file(pathSrc.c_str(), pathDest, filesystem::copy_option::overwrite_if_exists);
 #else
@@ -1512,7 +1515,7 @@ std::list<CBigNum> CWalletDB::ListSpentCoinsSerial()
 {
     std::list<CBigNum> listPubCoin;
     std::list<CZerocoinSpend> listCoins = ListSpentCoins();
-    
+
     for ( auto& coin : listCoins) {
         listPubCoin.push_back(coin.GetSerial());
     }
