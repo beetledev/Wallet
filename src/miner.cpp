@@ -592,9 +592,9 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
                 fMintableCoins = pwallet->MintableCoins();
             }
 
-            if (chainActive.Height() < Params().LAST_POW_BLOCK() || (chainActive.Height() + 1 < Params().ModifierUpgradeBlock() && Params().NetworkID() == CBaseChainParams::MAIN)) {
+            if (chainActive.Height() < Params().LAST_POW_BLOCK()) {
                 MilliSleep(5000);
-                continue; // Do not stake until the upgrade block
+                continue;
             }
 
             while (vNodes.empty() || pwallet->IsLocked() || !fMintableCoins || (pwallet->GetBalance() > 0 && nReserveBalance >= pwallet->GetBalance()) || !masternodeSync.IsSynced()) {

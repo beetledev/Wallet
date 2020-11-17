@@ -2971,9 +2971,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     if (nBalance > 0 && nBalance <= nReserveBalance)
         return false;
 
-    if (chainActive.Height() + 1 < Params().ModifierUpgradeBlock() && Params().NetworkID() == CBaseChainParams::MAIN)
-        return false; // Do not stake until the upgrade block
-
     // Get the list of stakable inputs
     std::list<std::unique_ptr<CStakeInput> > listInputs;
     if (!SelectStakeCoins(listInputs, nBalance - nReserveBalance))
