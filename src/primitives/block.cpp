@@ -13,12 +13,19 @@
 #include "utilstrencodings.h"
 #include "util.h"
 
+uint256 CBlockHeader::GetPoWHash() const
+{
+    return XEVAN(BEGIN(nVersion), END(nNonce));
+}
+
 uint256 CBlockHeader::GetHash() const
 {
-    if (nVersion < 4)
-        return XEVAN(BEGIN(nVersion), END(nNonce));
-    else
+    if (nVersion > 4)
+        return Hash(BEGIN(nVersion), END(nNonce));
+    else if (nVersion == 4)
         return Hash(BEGIN(nVersion), END(nAccumulatorCheckpoint));
+    else
+        return GetPoWHash();
 }
 
 uint256 CBlock::BuildMerkleTree(bool* fMutated) const

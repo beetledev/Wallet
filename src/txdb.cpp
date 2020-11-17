@@ -263,7 +263,7 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->nStakeTime = diskindex.nStakeTime;
                 pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
 
-                if (pindexNew->nNonce != 0 && pindexNew->IsProofOfWork() && !CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits)) // nNonce = 0 for PoS blocks
+                if (pindexNew->nNonce != 0 && pindexNew->IsProofOfWork() && !CheckProofOfWork(pindexNew->GetBlockHeader().GetPoWHash(), pindexNew->nBits)) // nNonce = 0 for PoS blocks
                     return error("LoadBlockIndex() : CheckProofOfWork failed: %s", pindexNew->ToString());
 
                 //populate accumulator checksum map in memory

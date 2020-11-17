@@ -110,10 +110,11 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet* pwallet, 
 
     // Make sure to create the correct block version after zerocoin is enabled
     bool fZerocoinActive = chainActive.Height() + 1 >= Params().Zerocoin_StartHeight();
-    if (fZerocoinActive)
+    /*if (fZerocoinActive)
         pblock->nVersion = std::max(Params().Zerocoin_HeaderVersion(), CBlock::CURRENT_VERSION);
     else
-        pblock->nVersion = Params().Zerocoin_HeaderVersion()-1;
+        pblock->nVersion = Params().Zerocoin_HeaderVersion()-1;*/
+    pblock->nVersion = CBlock::CURRENT_VERSION;
 
     // -regtest only: allow overriding block.nVersion with
     // -blockversion=N to test forking scenarios
@@ -435,7 +436,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet* pwallet, 
 
         nLastBlockTx = nBlockTx;
         nLastBlockSize = nBlockSize;
-        LogPrintf("CreateNewBlock(): total size %u\n", nBlockSize);
+        LogPrint("beetlecoin", "CreateNewBlock(): total size %u\n", nBlockSize);
 
         // Compute final coinbase transaction.
         if (!fProofOfStake) {
@@ -621,8 +622,6 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
             }
         }
 
-        MilliSleep(1000);
-
         //
         // Create new block
         //
@@ -632,8 +631,10 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
             continue;
 
         unique_ptr<CBlockTemplate> pblocktemplate(fProofOfStake ? CreateNewBlock(CScript(), pwallet, fProofOfStake) : CreateNewBlockWithKey(reservekey, pwallet, fProofOfStake));
-        if (!pblocktemplate.get())
+        if (!pblocktemplate.get()) {
+            MilliSleep(30000);
             continue;
+        }
 
         CBlock* pblock = &pblocktemplate->block;
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
@@ -669,7 +670,7 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
             continue;
         }
 
-        LogPrintf("Running BeetleCoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+        LogPrint("beetlecoin", "Running BeetleCoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
             ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
         //
@@ -682,7 +683,7 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
 
             uint256 hash;
             while (true) {
-                hash = pblock->GetHash();
+                hash = pblock->GetPoWHash();
                 if (hash <= hashTarget) {
                     // Found a solution
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);

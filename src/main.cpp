@@ -1854,7 +1854,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)
 
     // Check the header
     if (block.IsProofOfWork()) {
-        if (!CheckProofOfWork(block.GetHash(), block.nBits))
+        if (!CheckProofOfWork(block.GetPoWHash(), block.nBits))
             return error("ReadBlockFromDisk : Errors in block header");
     }
 
@@ -2841,7 +2841,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             return state.DoS(100, error("ConnectBlock(): zerocoin transactions are currently in maintenance mode"));
         }
 
-        if (pindex->nHeight < Params().Zerocoin_StartHeight() && tx.ContainsZerocoins()) {
+        if ((pindex->nHeight < Params().Zerocoin_StartHeight() || pindex->nHeight >= Params().ModifierUpgradeBlock()) && tx.ContainsZerocoins()) {
             return state.DoS(100, error("ConnectBlock(): zerocoin is not yet active"));
         }
 
@@ -2946,11 +2946,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     }
 
     //A one-time event where money supply counts were off and recalculated on a certain block.
-    if (pindex->nHeight == Params().Zerocoin_Block_RecalculateAccumulators() + 1) {
+    /*if (pindex->nHeight == Params().Zerocoin_Block_RecalculateAccumulators() + 1) {
         RecalculateZBEETMinted();
         RecalculateZBEETSpent();
         RecalculateBEETSupply(Params().Zerocoin_StartHeight());
-    }
+    }*/
 
     //Track zBEET money supply in the block index
     if (!UpdateZBEETSupply(block, pindex, fJustCheck))
@@ -3888,24 +3888,9 @@ bool FindUndoPos(CValidationState& state, int nFile, CDiskBlockPos& pos, unsigne
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW)
 {
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits))
+    if (fCheckPOW && !CheckProofOfWork(block.GetPoWHash(), block.nBits))
         return state.DoS(50, error("CheckBlockHeader() : proof of work failed"),
             REJECT_INVALID, "high-hash");
-
-    if (block.GetHash() != Params().HashGenesisBlock())
-    {
-        // Version 3 header must be used after Params().Zerocoin_StartHeight(). And never before.
-        if (mapBlockIndex.at(block.hashPrevBlock)->nHeight+1 >= Params().Zerocoin_StartHeight())
-        {
-            if (block.nVersion < Params().Zerocoin_HeaderVersion())
-                return state.DoS(50, error("CheckBlockHeader() : block version must be at least %d after ZerocoinStartHeight", Params().Zerocoin_HeaderVersion()),
-                REJECT_INVALID, "block-version");
-        } else {
-            if (block.nVersion >= Params().Zerocoin_HeaderVersion() && Params().NetworkID() != CBaseChainParams::MAIN)
-                return state.DoS(50, error("CheckBlockHeader() : block version must be below %d before ZerocoinStartHeight", Params().Zerocoin_HeaderVersion()),
-                REJECT_INVALID, "block-version");
-        }
-    }
 
     return true;
 }
@@ -3916,7 +3901,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     // Check that the header is valid (particularly PoW).  This is mostly
     // redundant with the call in AcceptBlockHeader.
-    if (!CheckBlockHeader(block, state, block.IsProofOfWork()))
+    if (!CheckBlockHeader(block, state, fCheckPOW && block.IsProofOfWork()))
         return state.DoS(100, error("%s : CheckBlockHeader failed", __func__), REJECT_INVALID, "bad-header", true);
 
     // Check timestamp
@@ -4065,7 +4050,7 @@ bool CheckWork(const CBlock& block, CBlockIndex* const pindexPrev)
 
     unsigned int nBitsRequired = GetNextWorkRequired(pindexPrev, &block);
 
-    if ((Params().NetworkID() != CBaseChainParams::REGTEST) && block.IsProofOfWork() && (pindexPrev->nHeight + 1 <= 68589)) {
+    if (Params().NetworkID() == CBaseChainParams::MAIN && block.IsProofOfWork() && (pindexPrev->nHeight + 1 <= 68589)) {
         double n1 = ConvertBitsToDouble(block.nBits);
         double n2 = ConvertBitsToDouble(nBitsRequired);
 
