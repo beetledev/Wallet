@@ -19,6 +19,12 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
+/**
+ * Maximum amount of time that a block timestamp is allowed to exceed the
+ * current network-adjusted time before the block will be accepted.
+ */
+static constexpr int64_t MAX_FUTURE_BLOCK_TIME = 3 * 60; // FTL = 3 minutes
+
 struct CDiskBlockPos {
     int nFile;
     unsigned int nPos;
