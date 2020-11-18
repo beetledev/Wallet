@@ -1958,7 +1958,7 @@ bool IsTreasuryBlock(int nHeight)
 {
     if (nHeight <= Params().TreasuryStartBlock()) { // the block reward is reduced after TreasuryStartBlock to later be put into a payment
         return false;
-    } else if ((nHeight-Params().TreasuryStartBlock()) % Params().TreasuryBlockStep() == 0) {
+    } else if (((nHeight-Params().TreasuryStartBlock()) % Params().TreasuryBlockStep() == 0 && nHeight >= Params().SecondForkBlock()) || ((nHeight-Params().TreasuryStartBlock()) % 1440 == 0 && nHeight < Params().SecondForkBlock())) {
         return true;
     } else {
         return false;
@@ -1968,7 +1968,7 @@ bool IsTreasuryBlock(int nHeight)
 int64_t GetTreasuryAward(int nHeight)
 {
     if (IsTreasuryBlock(nHeight)) {
-        int startHeight = std::max(nHeight - Params().TreasuryBlockStep(), 0);
+        int startHeight = std::max(nHeight - (nHeight >= Params().SecondForkBlock() ? Params().TreasuryBlockStep() : 1440), 0);
         int64_t blockValue = 0;
 
         for (int i = startHeight; i < nHeight; i++) {

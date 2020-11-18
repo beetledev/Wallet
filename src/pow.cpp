@@ -41,33 +41,14 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (nHeight > Params().LAST_POW_BLOCK() || nHeight >= Params().SecondForkBlock()) {
         uint256 bnTargetLimit = nHeight < Params().SecondForkBlock() ? ~uint256(0) >> 24 : Params().ProofOfWorkLimit();
 
-        int64_t nActualSpacing = 0;
-        if (pindexLast->nHeight != 0)
-            nActualSpacing = pindexLast->GetBlockTime() - pindexLast->pprev->GetBlockTime();
+        if (pindexLast == nullptr)
+            return bnTargetLimit.GetCompact(); // genesis block
 
-        if (nHeight >= Params().SecondForkBlock()) {
-            // If nActualSpacing is very, very negative (close to but greater than -nTargetTimespan/2), it would cause the difficulty calculation to result
-            // in zero or a negative number, so we have no choice but to limit the solvetime to the lowest value this method can handle. Ideally, this if
-            // statement would become impossible to trigger by requiring sequential timestamps or MTP enforcement and a large enough nTargetTimespan. There
-            // may be a way to extend this calculation to appropriately handle even lower negative numbers, but the difficulty already increases significantly
-            // for small negative solvetimes and the next solvetime would have to be many times larger than this negative value in order to simply return
-            // to the same difficulty as before, which can be modeled by the following equation where x is previous solvetime and f(x) is the next solvetime:
-            // f(x) = ((nInterval + 1) * nTargetSpacing / 2)^2 / ((nInterval - 1) * nTargetSpacing / 2 + x) - ((nInterval - 1) * nTargetSpacing / 2)
-            if (nActualSpacing <= -((Params().Interval() - 1) * Params().TargetSpacing() / 2))
-                nActualSpacing = -((Params().Interval() - 1) * Params().TargetSpacing() / 2) + 1;
-        } else {
-            // WARNING: Limiting the solvetime and how much the difficulty can rise here allows attackers to drop the difficulty to zero using timestamps in the past
-            if (nActualSpacing < 0)
-                nActualSpacing = 1;
-        }
+        if (pindexLast->pprev == nullptr)
+            return bnTargetLimit.GetCompact(); // first block
 
-        // ppcoin: target change every block
-        // ppcoin: retarget with exponential moving toward target spacing
-        uint256 bnNew;
-        bnNew.SetCompact(pindexLast->nBits);
-
-        bnNew *= ((Params().Interval() - 1) * Params().TargetSpacing() + 2 * nActualSpacing);
-        bnNew /= ((Params().Interval() + 1) * Params().TargetSpacing());
+        if (pindexLast->pprev->pprev == nullptr)
+            return bnTargetLimit.GetCompact(); // second block
 
         if (Params().NetworkID() == CBaseChainParams::MAIN) {
             // Account for the first PoS block
@@ -84,6 +65,38 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
             if (nHeight == 345008 && pblock->nTime == 1557783188 && pindexLast->GetBlockHash() == uint256("0x3d5836627f058b814e3f399d97e7dcbdf0696ec18792ae1a93d56d4a8c1c16dc")) return 0x1e00ffff;
             if (nHeight == 345009 && pblock->nTime == 1557783198 && pindexLast->GetBlockHash() == uint256("0x1e26bd657acf9150ff0c4ad155bdb7d38e5ef941f343e239ac01a3088bca39d9")) return 0x1e00ffff;
         }
+
+        int nActualSpacing = pindexLast->GetBlockTime() - pindexLast->pprev->GetBlockTime();
+
+        const int nTargetSpacing = nHeight >= Params().SecondForkBlock() ? Params().TargetSpacing() : 60;
+        const uint32_t nTargetTimespan = nHeight >= Params().SecondForkBlock() ? Params().TargetTimespan() : (40 * 60);
+        const int nInterval = nTargetTimespan / nTargetSpacing;
+
+        if (nHeight >= Params().SecondForkBlock()) {
+            // If nActualSpacing is very, very negative (close to but greater than -nTargetTimespan/2), it would cause the difficulty calculation to result
+            // in zero or a negative number, so we have no choice but to limit the solvetime to the lowest value this method can handle. Ideally, this if
+            // statement would become impossible to trigger by requiring sequential timestamps or MTP enforcement and a large enough nTargetTimespan. There
+            // may be a way to extend this calculation to appropriately handle even lower negative numbers, but the difficulty already increases significantly
+            // for small negative solvetimes and the next solvetime would have to be many times larger than this negative value in order to simply return
+            // to the same difficulty as before, which can be modeled by the following equation where x is previous solvetime and f(x) is the next solvetime:
+            // f(x) = ((nInterval + 1) * nTargetSpacing / 2)^2 / ((nInterval - 1) * nTargetSpacing / 2 + x) - ((nInterval - 1) * nTargetSpacing / 2)
+            if (nActualSpacing <= -((nInterval - 1) * nTargetSpacing / 2))
+                nActualSpacing = -((nInterval - 1) * nTargetSpacing / 2) + 1;
+        } else {
+            // WARNING: Limiting the solvetime and how much the difficulty can rise here allows attackers to drop the difficulty to zero using timestamps in the past
+            if (nActualSpacing < 0)
+                nActualSpacing = 1;
+        }
+
+        // ppcoin: target change every block
+        // ppcoin: retarget with exponential moving toward target spacing
+        uint256 bnNew;
+        bnNew.SetCompact(pindexLast->nBits);
+
+        const uint32_t numerator = (nInterval - 1) * nTargetSpacing + 2 * nActualSpacing;
+        const uint32_t denominator = (nInterval + 1) * nTargetSpacing;
+
+        bnNew = bnNew * numerator / denominator;
 
         if (bnNew <= 0 || bnNew > bnTargetLimit)
             bnNew = bnTargetLimit;
@@ -122,11 +135,6 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     uint256 bnNew(PastDifficultyAverage);
 
     int64_t _nTargetTimespan = CountBlocks * Params().TargetSpacing();
-
-    if (nActualTimespan < _nTargetTimespan / 3)
-        nActualTimespan = _nTargetTimespan / 3;
-    if (nActualTimespan > _nTargetTimespan * 3)
-        nActualTimespan = _nTargetTimespan * 3;
 
     // Retarget
     bnNew *= nActualTimespan;
