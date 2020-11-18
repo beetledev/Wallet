@@ -197,7 +197,7 @@ bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMin
     if (IsTreasuryBlock(nHeight)) {
         const CTransaction& txNew = block.IsProofOfStake() ? block.vtx[1] : block.vtx[0];
         CScript treasuryPayee = Params().GetTreasuryRewardScriptAtHeight(nHeight);
-        //CAmount blockValue = GetBlockValue(nHeight-1);
+        //CAmount blockValue = GetBlockValue(nHeight);
         CAmount treasuryPayment = GetTreasuryAward(nHeight);
 
         bool bFound = false;
@@ -357,8 +357,8 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
             }
         }
 
-        CAmount blockValue = GetBlockValue(pindexPrev->nHeight);
-        CAmount masternodePayment = GetMasternodePayment(pindexPrev->nHeight, mnlevel, blockValue);
+        const CAmount blockValue = GetBlockValue(pindexPrev->nHeight + 1);
+        const CAmount masternodePayment = GetMasternodePayment(pindexPrev->nHeight + 1, mnlevel, blockValue);
 
         if (hasPayment) {
             if (fProofOfStake) {
@@ -409,9 +409,6 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
                 level++;
 
             LogPrint("masternode","Masternode payment of %s to %s\n", FormatMoney(masternodePayment).c_str(), address2.ToString().c_str());
-        } else {
-            if (!fProofOfStake)
-                txNew.vout[0].nValue = blockValue;
         }
     }
 }

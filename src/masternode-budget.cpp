@@ -562,7 +562,7 @@ void CBudgetManager::FillBlockPayee(CMutableTransaction& txNew, CAmount nFees, b
         ++it;
     }
 
-    CAmount blockValue = GetBlockValue(pindexPrev->nHeight);
+    CAmount blockValue = GetBlockValue(pindexPrev->nHeight + 1);
 
     if (fProofOfStake) {
         if (nHighestCount > 0) {
@@ -607,7 +607,7 @@ void CBudgetManager::FillTreasuryBlockPayee(CMutableTransaction& txNew, CAmount 
     CScript payee;
     int height = pindexPrev->nHeight + 1;
 
-    CAmount blockValue = GetBlockValue(height-1);
+    CAmount blockValue = GetBlockValue(height);
     payee = Params().GetTreasuryRewardScriptAtHeight(height);
     CAmount treasuryPayment = GetTreasuryAward(height);
 

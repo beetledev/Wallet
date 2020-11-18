@@ -1894,15 +1894,16 @@ double ConvertBitsToDouble(unsigned int nBits)
 
 int64_t GetBlockValue(int nHeight)
 {
-    nHeight++; // one more than chainActive.Height()
-    if (nHeight <= 0) return 0;
+    if (nHeight < 0) return 0;
     if (Params().NetworkID() != CBaseChainParams::MAIN)
         return nHeight >= Params().TreasuryStartBlock() ? 90 * COIN : 100 * COIN;
     //LogPrintf("GetBlockValue(): INFO : Block reward=%s chainActive height=%s supply=%s chainActive supply=%s\n", nHeight, chainActive.Height(), chainActive[nHeight-1]->nMoneySupply/COIN, chainActive.Tip()->nMoneySupply/COIN);
 
     int64_t nSubsidy = 0;
 
-    if (nHeight == 1) {
+    if (nHeight == 0) {
+        nSubsidy = 1 * COIN;
+    } else if (nHeight == 1) {
         nSubsidy = 200000 * COIN;
     } else if (nHeight > 1 && nHeight <= 9) {
         nSubsidy = 20000000 * COIN;
@@ -1932,8 +1933,6 @@ int64_t GetBlockValue(int nHeight)
 
 int64_t GetMasternodePayment(int nHeight, unsigned mnlevel, int64_t blockValue)
 {
-    nHeight++;
-
     if (nHeight >= Params().TreasuryStartBlock())
         blockValue = blockValue * 10 / 9; // add back treasury percentage to get original block value
 
@@ -2971,7 +2970,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime1 - nTimeStart), 0.001 * (nTime1 - nTimeStart) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime1 - nTimeStart) / (nInputs - 1), nTimeConnect * 0.000001);
 
     //PoW phase redistributed fees to miner. PoS stage destroys fees.
-    CAmount nExpectedMint = GetBlockValue(pindex->pprev->nHeight) + GetTreasuryAward(pindex->nHeight);
+    CAmount nExpectedMint = GetBlockValue(pindex->nHeight) + GetTreasuryAward(pindex->nHeight);
     if (block.IsProofOfWork())
         nExpectedMint += nFees;
     //LogPrintf("ConnectBlock(): INFO : Block reward (actual=%s vs limit=%s) maximum: %s\n", FormatMoney(pindex->nMint), FormatMoney(nExpectedMint), FormatMoney(pindex->nMint) == FormatMoney(nExpectedMint));

@@ -425,12 +425,17 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet* pwallet, 
         }
 
         if (!fProofOfStake) {
+            CAmount nBlockValue = GetBlockValue(nHeight);
+
             //Masternode and general budget payments
-            FillBlockPayee(txNew, nFees, fProofOfStake, false);
+            FillBlockPayee(txNew, nFees, false, false);
 
             //Make payee
             if (txNew.vout.size() > 1) {
                 pblock->payee = txNew.vout[1].scriptPubKey;
+            } else {
+                //CAmount blockValue = nFees + GetBlockValue(pindexPrev->nHeight + 1);
+                txNew.vout[0].nValue = nBlockValue;
             }
         }
 

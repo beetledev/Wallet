@@ -230,7 +230,7 @@ std::string BlockToString(CBlockIndex* pBlock)
     if (height == 0)
         Generated = OutVolume;
     else
-        Generated = GetBlockValue(height - 1) + GetTreasuryAward(height);
+        Generated = GetBlockValue(height) + GetTreasuryAward(height);
 
     std::string BlockContentCells[] =
         {
