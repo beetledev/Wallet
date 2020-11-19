@@ -193,8 +193,8 @@ void OverviewPage::setBalance(const CAmount& balance, const CAmount& unconfirmed
     }
 
     // BEET Balance
-    CAmount nTotalBalance = balance + unconfirmedBalance;
-    CAmount beetAvailableBalance = balance - immatureBalance - nLockedBalance;
+    CAmount nTotalBalance = balance + unconfirmedBalance + immatureBalance; // add PoW immature balance
+    CAmount beetAvailableBalance = balance /*- immatureBalance*/ - nLockedBalance; // subtract PoS immature balance
     CAmount nUnlockedBalance = nTotalBalance - nLockedBalance;
 
     // BEET Watch-Only Balance
