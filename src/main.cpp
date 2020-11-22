@@ -79,7 +79,9 @@ bool fVerifyingBlocks = false;
 unsigned int nCoinCacheSize = 5000;
 bool fAlerts = DEFAULT_ALERTS;
 
-unsigned int nStakeMinAge = 60 * 60; // 1 hour
+unsigned int nStakeMinAge = 12 * 60 * 60; // 12 hours
+unsigned int nStakeMinAgeOld = 60 * 60; // 1 hour
+int nStakeMinDepth = 600; // 600 blocks
 int64_t nReserveBalance = 0;
 
 /** Fees smaller than this (in ubeet) are considered zero fee (for relaying and mining)
@@ -3748,8 +3750,13 @@ CBlockIndex* AddToBlockIndex(const CBlock& block)
         // ppcoin: compute stake modifier
         uint64_t nStakeModifier = 0;
         bool fGeneratedStakeModifier = false;
-        if (!ComputeNextStakeModifier(pindexNew->pprev, nStakeModifier, fGeneratedStakeModifier))
-            LogPrintf("AddToBlockIndex() : ComputeNextStakeModifier() failed \n");
+        if (pindexNew->nHeight >= Params().SecondForkBlock()) {
+            nStakeModifier = ComputeStakeModifierV3(pindexNew->pprev, pindexNew->GetBlockHash());
+            fGeneratedStakeModifier = true;
+        } else {
+            if (!ComputeNextStakeModifier(pindexNew->pprev, nStakeModifier, fGeneratedStakeModifier))
+                LogPrintf("AddToBlockIndex() : ComputeNextStakeModifier() failed \n");
+        }
         pindexNew->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
         pindexNew->nStakeModifierChecksum = GetStakeModifierChecksum(pindexNew);
         if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
@@ -4307,7 +4314,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
         uint256 hashProofOfStake = 0;
         std::unique_ptr<CStakeInput> stake;
 
-        if (!CheckProofOfStake(block, hashProofOfStake, stake))
+        if (!CheckProofOfStake(block, pindexPrev, hashProofOfStake, stake))
             return state.DoS(100, error("%s: proof of stake check failed", __func__));
 
         if (!stake)
