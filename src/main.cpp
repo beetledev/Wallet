@@ -79,7 +79,9 @@ bool fVerifyingBlocks = false;
 unsigned int nCoinCacheSize = 5000;
 bool fAlerts = DEFAULT_ALERTS;
 
-unsigned int nStakeMinAge = 60 * 60; // 1 hour
+unsigned int nStakeMinAge = 12 * 60 * 60; // 12 hours
+unsigned int nStakeMinAgeOld = 60 * 60; // 1 hour
+int nStakeMinDepth = 600; // 600 blocks
 int64_t nReserveBalance = 0;
 
 /** Fees smaller than this (in ubeet) are considered zero fee (for relaying and mining)
@@ -1894,22 +1896,23 @@ double ConvertBitsToDouble(unsigned int nBits)
 
 int64_t GetBlockValue(int nHeight)
 {
-    nHeight++; // one more than chainActive.Height()
-    if (nHeight <= 0) return 0;
+    if (nHeight < 0) return 0;
+    //LogPrintf("GetBlockValue(): INFO : Block reward=%li chainActive height=%i supply=%li chainActive supply=%li\n", nHeight, chainActive.Height(), chainActive[nHeight-1]->nMoneySupply/COIN, chainActive.Tip()->nMoneySupply/COIN);
     if (Params().NetworkID() != CBaseChainParams::MAIN)
         return nHeight >= Params().TreasuryStartBlock() ? 90 * COIN : 100 * COIN;
-    //LogPrintf("GetBlockValue(): INFO : Block reward=%s chainActive height=%s supply=%s chainActive supply=%s\n", nHeight, chainActive.Height(), chainActive[nHeight-1]->nMoneySupply/COIN, chainActive.Tip()->nMoneySupply/COIN);
 
     int64_t nSubsidy = 0;
 
-    if (nHeight == 1) {
+    if (nHeight == 0) {
+        nSubsidy = 1 * COIN;
+    } else if (nHeight == 1) {
         nSubsidy = 200000 * COIN;
     } else if (nHeight > 1 && nHeight <= 9) {
         nSubsidy = 20000000 * COIN;
     } else if (nHeight > 9 && nHeight <= 2501) {
         nSubsidy = 5 * COIN;
     } else {
-        int64_t nMoneySupply = chainActive[nHeight-1] ? chainActive[nHeight-1]->nMoneySupply : chainActive.Tip()->nMoneySupply;
+        const int64_t nMoneySupply = (nHeight > 0 && chainActive.Tip()) ? (chainActive[nHeight-1] ? chainActive[nHeight-1]->nMoneySupply : chainActive.Tip()->nMoneySupply) : 0;
 
         if (nMoneySupply < Params().FirstSupplyReduction()) {
             nSubsidy = 75 * COIN;
@@ -1932,8 +1935,6 @@ int64_t GetBlockValue(int nHeight)
 
 int64_t GetMasternodePayment(int nHeight, unsigned mnlevel, int64_t blockValue)
 {
-    nHeight++;
-
     if (nHeight >= Params().TreasuryStartBlock())
         blockValue = blockValue * 10 / 9; // add back treasury percentage to get original block value
 
@@ -1958,7 +1959,7 @@ bool IsTreasuryBlock(int nHeight)
 {
     if (nHeight <= Params().TreasuryStartBlock()) { // the block reward is reduced after TreasuryStartBlock to later be put into a payment
         return false;
-    } else if ((nHeight-Params().TreasuryStartBlock()) % Params().TreasuryBlockStep() == 0) {
+    } else if (((nHeight-Params().TreasuryStartBlock()) % Params().TreasuryBlockStep() == 0 && nHeight >= Params().SecondForkBlock()) || ((nHeight-Params().TreasuryStartBlock()) % 1440 == 0 && nHeight < Params().SecondForkBlock())) {
         return true;
     } else {
         return false;
@@ -1968,12 +1969,15 @@ bool IsTreasuryBlock(int nHeight)
 int64_t GetTreasuryAward(int nHeight)
 {
     if (IsTreasuryBlock(nHeight)) {
-        int startHeight = std::max(nHeight - Params().TreasuryBlockStep(), 0);
+        int startHeight = std::max(nHeight - (nHeight >= Params().SecondForkBlock() ? Params().TreasuryBlockStep() : 1440), 0);
         int64_t blockValue = 0;
 
+        //printf("nHeight = %i\n", nHeight);
+        //printf("startHeight = %i\n", startHeight);
         for (int i = startHeight; i < nHeight; i++) {
             blockValue += GetBlockValue(i); // add up coins from previous TreasuryBlockStep blocks
         }
+        //printf("blockValue = %li\n", blockValue);
         blockValue = blockValue * 10 / 9; // add back treasury payment to get original block value
         return blockValue / 10; // 10% of block value paid to treasury
     } else {
@@ -2825,6 +2829,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
     CAmount nValueOut = 0;
     CAmount nValueIn = 0;
+    CAmount nAmountBurned = 0;
     unsigned int nMaxBlockSigOps = MAX_BLOCK_SIGOPS_CURRENT;
     std::vector<uint256> vSpendsInBlock;
     uint256 hashBlock = block.GetHash();
@@ -2873,7 +2878,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             // Check that zBEET mints are not already known
             if (tx.IsZerocoinMint()) {
-                for (auto& out : tx.vout) {
+                for (const CTxOut& out : tx.vout) {
                     if (!out.IsZerocoinMint())
                         continue;
 
@@ -2902,7 +2907,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             // Check that zBEET mints are not already known
             if (tx.IsZerocoinMint()) {
-                for (auto& out : tx.vout) {
+                for (const CTxOut& out : tx.vout) {
                     if (!out.IsZerocoinMint())
                         continue;
 
@@ -2934,6 +2939,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             control.Add(vChecks);
         }
         nValueOut += tx.GetValueOut();
+        for (const CTxOut& out : tx.vout) {
+            if (out.scriptPubKey.IsUnspendable())
+                nAmountBurned += out.nValue;
+        }
 
         CTxUndo undoDummy;
         if (i > 0) {
@@ -2957,29 +2966,27 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         return state.DoS(100, error("%s: Failed to calculate new zBEET supply for block=%s height=%d", __func__,
                                     block.GetHash().GetHex(), pindex->nHeight), REJECT_INVALID);
 
-    // track money supply and mint amount info
-    CAmount nMoneySupplyPrev = pindex->pprev ? pindex->pprev->nMoneySupply : 0;
-    pindex->nMoneySupply = nMoneySupplyPrev + nValueOut - nValueIn;
-    pindex->nMint = pindex->nMoneySupply - nMoneySupplyPrev + nFees;
-
-//    LogPrintf("XX69----------> ConnectBlock(): nValueOut: %s, nValueIn: %s, nFees: %s, nMint: %s zBEETSpent: %s\n",
-//              FormatMoney(nValueOut), FormatMoney(nValueIn),
-//              FormatMoney(nFees), FormatMoney(pindex->nMint), FormatMoney(nAmountZerocoinSpent));
-
     int64_t nTime1 = GetTimeMicros();
     nTimeConnect += nTime1 - nTimeStart;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime1 - nTimeStart), 0.001 * (nTime1 - nTimeStart) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime1 - nTimeStart) / (nInputs - 1), nTimeConnect * 0.000001);
 
     //PoW phase redistributed fees to miner. PoS stage destroys fees.
-    CAmount nExpectedMint = GetBlockValue(pindex->pprev->nHeight) + GetTreasuryAward(pindex->nHeight);
-    if (block.IsProofOfWork())
-        nExpectedMint += nFees;
-    //LogPrintf("ConnectBlock(): INFO : Block reward (actual=%s vs limit=%s) maximum: %s\n", FormatMoney(pindex->nMint), FormatMoney(nExpectedMint), FormatMoney(pindex->nMint) == FormatMoney(nExpectedMint));
+    const CAmount nActualBlockReward = nFees + nValueOut - nValueIn;
+    CAmount nExpectedBlockReward = GetBlockValue(pindex->nHeight) + GetTreasuryAward(pindex->nHeight);
+    if (pindex->nHeight >= Params().SecondForkBlock() || block.IsProofOfStake())
+        nAmountBurned += nFees;
+    else
+        nExpectedBlockReward += nFees;
+    //LogPrintf("ConnectBlock(): INFO : Block reward (actual=%s vs limit=%s) maximum: %s\n", FormatMoney(nActualBlockReward), FormatMoney(nExpectedBlockReward), FormatMoney(nActualBlockReward) == FormatMoney(nExpectedBlockReward));
+
+//    LogPrintf("XX69----------> ConnectBlock(): nValueOut: %s, nValueIn: %s, nFees: %s, nMint: %s zBEETSpent: %s\n",
+//              FormatMoney(nValueOut), FormatMoney(nValueIn),
+//              FormatMoney(nFees), FormatMoney(nActualBlockReward), FormatMoney(nAmountZerocoinSpent));
 
     //Check that the block does not overmint
-    if (!IsBlockValueValid(block, nExpectedMint, pindex->nMint)) {
+    if (!IsBlockValueValid(block, nExpectedBlockReward, nActualBlockReward)) {
         return state.DoS(100, error("ConnectBlock() : reward pays too much (actual=%s vs limit=%s)",
-                                    FormatMoney(pindex->nMint), FormatMoney(nExpectedMint)),
+                                    FormatMoney(nActualBlockReward), FormatMoney(nExpectedBlockReward)),
                          REJECT_INVALID, "bad-cb-amount");
     }
 
@@ -3003,6 +3010,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     //IMPORTANT NOTE: Nothing before this point should actually store to disk (or even memory)
     if (fJustCheck)
         return true;
+
+    // peercoin: track money supply and mint amount info
+    pindex->nMint = nActualBlockReward;
+    pindex->nMoneySupply = (pindex->pprev ? pindex->pprev->nMoneySupply : 0) + pindex->nMint - nAmountBurned;
 
     // Write undo information to disk
     if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS)) {
@@ -3739,8 +3750,13 @@ CBlockIndex* AddToBlockIndex(const CBlock& block)
         // ppcoin: compute stake modifier
         uint64_t nStakeModifier = 0;
         bool fGeneratedStakeModifier = false;
-        if (!ComputeNextStakeModifier(pindexNew->pprev, nStakeModifier, fGeneratedStakeModifier))
-            LogPrintf("AddToBlockIndex() : ComputeNextStakeModifier() failed \n");
+        if (pindexNew->nHeight >= Params().SecondForkBlock()) {
+            nStakeModifier = ComputeStakeModifierV3(pindexNew->pprev, pindexNew->GetBlockHash());
+            fGeneratedStakeModifier = true;
+        } else {
+            if (!ComputeNextStakeModifier(pindexNew->pprev, nStakeModifier, fGeneratedStakeModifier))
+                LogPrintf("AddToBlockIndex() : ComputeNextStakeModifier() failed \n");
+        }
         pindexNew->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
         pindexNew->nStakeModifierChecksum = GetStakeModifierChecksum(pindexNew);
         if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
@@ -4298,7 +4314,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
         uint256 hashProofOfStake = 0;
         std::unique_ptr<CStakeInput> stake;
 
-        if (!CheckProofOfStake(block, hashProofOfStake, stake))
+        if (!CheckProofOfStake(block, pindexPrev, hashProofOfStake, stake))
             return state.DoS(100, error("%s: proof of stake check failed", __func__));
 
         if (!stake)

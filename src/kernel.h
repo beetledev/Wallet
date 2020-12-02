@@ -1,5 +1,6 @@
-// Copyright (c) 2012-2013 The PPCoin developers
+// Copyright (c) 2012-2020 The Peercoin developers
 // Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2020 John "ComputerCraftr" Studnicka
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_KERNEL_H
@@ -22,14 +23,15 @@ static const int MODIFIER_INTERVAL_RATIO = 3;
 // Compute the hash modifier for proof-of-stake
 bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifier, int& nStakeModifierHeight, int64_t& nStakeModifierTime, bool fPrintProofOfStake);
 bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier);
+uint64_t ComputeStakeModifierV3(const CBlockIndex* pindexPrev, const uint256& kernel);
 
-bool CheckStake(const CDataStream& ssUniqueID, CAmount nValueIn, const uint64_t nStakeModifier, const uint256& bnTarget, unsigned int nTimeBlockFrom, unsigned int& nTimeTx, uint256& hashProofOfStake);
+bool CheckStake(const CDataStream& ssUniqueID, CAmount nValueIn, const uint64_t nStakeModifier, const uint256& bnTarget, unsigned int nTimeBlockFrom, int nHeightBlockFrom, unsigned int& nTimeTx, int nHeightCurrent, uint256& hashProofOfStake);
 bool stakeTargetHit(const uint256& hashProofOfStake, const int64_t& nValueIn, const uint256& bnTargetPerCoinDay);
-bool Stake(CStakeInput* stakeInput, unsigned int nBits, unsigned int nTimeBlockFrom, unsigned int& nTimeTx, uint256& hashProofOfStake);
+bool Stake(CStakeInput* stakeInput, unsigned int nBits, unsigned int nTimeBlockFrom, int nHeightBlockFrom, unsigned int& nTimeTx, uint256& hashProofOfStake);
 
 // Check kernel hash target and coinstake signature
 // Sets hashProofOfStake on success return
-bool CheckProofOfStake(const CBlock& block, uint256& hashProofOfStake, std::unique_ptr<CStakeInput>& stake);
+bool CheckProofOfStake(const CBlock& block, const CBlockIndex* pindexPrev, uint256& hashProofOfStake, std::unique_ptr<CStakeInput>& stake);
 
 // Check whether the coinstake timestamp meets protocol
 bool CheckCoinStakeTimestamp(int64_t nTimeBlock, int64_t nTimeTx);

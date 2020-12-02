@@ -91,7 +91,7 @@ bool CZBeetStake::GetModifier(uint64_t& nStakeModifier)
     }
 }
 
-CDataStream CZBeetStake::GetUniqueness()
+CDataStream CZBeetStake::GetUniqueness(bool fNewOrder)
 {
     //The unique identifier for a zBEET is a hash of the serial
     CDataStream ss(SER_GETHASH, 0);
@@ -249,11 +249,14 @@ bool CBeetStake::GetModifier(uint64_t& nStakeModifier)
     return true;
 }
 
-CDataStream CBeetStake::GetUniqueness()
+CDataStream CBeetStake::GetUniqueness(bool fNewOrder)
 {
     //The unique identifier for a BEET stake is the outpoint
     CDataStream ss(SER_NETWORK, 0);
-    ss << nPosition << txFrom.GetHash();
+    if (fNewOrder)
+        ss << txFrom.GetHash() << nPosition;
+    else
+        ss << nPosition << txFrom.GetHash();
     return ss;
 }
 
