@@ -407,8 +407,10 @@ bool Stake(CStakeInput* stakeInput, unsigned int nBits, unsigned int nTimeBlockF
     } else if (fPostFork) {
         int nStakeModifierHeight = 0;
         int64_t nStakeModifierTime = 0;
-        if (!GetKernelStakeModifierV05(chainActive.Tip(), nTimeTx, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, false))
-            return error("failed to get new kernel stake modifier");
+        if (!GetKernelStakeModifierV05(chainActive.Tip(), nTimeTx, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, true)) {
+            LogPrintf("failed to get new kernel stake modifier");
+            nStakeModifier = chainActive.Tip()->nStakeModifier;
+        }
     } else {
         if (!stakeInput->GetModifier(nStakeModifier))
             return error("failed to get kernel stake modifier");
@@ -501,8 +503,10 @@ bool CheckProofOfStake(const CBlock& block, const CBlockIndex* pindexPrev, uint2
     } else if (fPostFork) {
         int nStakeModifierHeight = 0;
         int64_t nStakeModifierTime = 0;
-        if (!GetKernelStakeModifierV05(pindexPrev, nTxTime, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, false))
-            return error("%s failed to get new modifier for stake input\n", __func__);
+        if (!GetKernelStakeModifierV05(pindexPrev, nTxTime, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, true)) {
+            LogPrintf("%s failed to get new modifier for stake input\n", __func__);
+            nStakeModifier = pindexPrev->nStakeModifier;
+        }
     } else {
         if (!stake->GetModifier(nStakeModifier))
             return error("%s failed to get modifier for stake input\n", __func__);
