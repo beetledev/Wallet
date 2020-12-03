@@ -488,10 +488,10 @@ public:
         READWRITE(nMoneySupply);
         READWRITE(nFlags);
         READWRITE(nStakeModifier);
-        if (this->nVersion < 5 && IsProofOfStake()) {
+        /*if (IsProofOfStake()) {
             READWRITE(prevoutStake);
             READWRITE(nStakeTime);
-        } else {
+        } else*/ {
             const_cast<CDiskBlockIndex*>(this)->prevoutStake.SetNull();
             const_cast<CDiskBlockIndex*>(this)->nStakeTime = 0;
             const_cast<CDiskBlockIndex*>(this)->hashProofOfStake = uint256();
