@@ -299,7 +299,7 @@ public:
         nMinerThreads = 0;
         nTargetTimespan = 1 * 24 * 60 * 60; // 1 day
         nTargetSpacing = 64; // 64 seconds
-        nLastPOWBlock = 200;
+        nLastPOWBlock = 800;
         nMaturity = 15;
         nMasternodeCountDrift = 4;
         nModifierUpdateBlock = -1; //approx Mon, 17 Apr 2017 04:00:00 GMT
